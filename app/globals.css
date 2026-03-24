@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-nunito: "Nunito", sans-serif;
+  --font-baloo: "Baloo 2", cursive;
+}
+
+body {
+  font-family: "Nunito", sans-serif;
+  background: #f0f7ff;
+  color: #2c3e50;
+}
