@@ -42,6 +42,7 @@ export default function PecsBoard() {
   const [dragCardId, setDragCardId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [preSelectModeEnabled, setPreSelectModeEnabled] = useState(true);
+  const [preselectedIds, setPreselectedIds] = useState<Set<number>>(new Set());
   const [menuCard, setMenuCard] = useState<Card | null>(null);
   const [editingLabel, setEditingLabel] = useState<string | null>(null);
   const [showAddSheet, setShowAddSheet] = useState(false);
@@ -85,6 +86,10 @@ export default function PecsBoard() {
     if (savedMode === "parent" || savedMode === "child") setMode(savedMode);
     const savedPreselect = localStorage.getItem("pecs:preselect");
     if (savedPreselect !== null) setPreSelectModeEnabled(savedPreselect === "true");
+    try {
+      const savedIds = JSON.parse(localStorage.getItem("pecs:preselected-ids") ?? "[]");
+      if (Array.isArray(savedIds)) setPreselectedIds(new Set(savedIds));
+    } catch { /* ignore */ }
     return () => {
       if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
       stop();
@@ -98,21 +103,21 @@ export default function PecsBoard() {
   const activeCards = useMemo(() => cards.filter((c) => c.status === "active"), [cards]);
 
   const preselectedCount = useMemo(
-    () => activeCards.filter((c) => c.preselected === 1).length,
-    [activeCards]
+    () => activeCards.filter((c) => preselectedIds.has(c.id)).length,
+    [activeCards, preselectedIds]
   );
 
   // Only shuffles after mount (client-side), and only when data/filters change
   const visibleCards = useMemo(() => {
     let pool = activeCards;
     if (preSelectModeEnabled) {
-      const pre = pool.filter((c) => c.preselected === 1);
+      const pre = pool.filter((c) => preselectedIds.has(c.id));
       pool = pre.length > 0 ? pre : pool;
     }
     if (activeCategory !== "All") pool = pool.filter((c) => c.category === activeCategory);
     if (!mounted) return pool;
     return [...pool].sort(() => Math.random() - 0.5);
-  }, [activeCards, mode, preSelectModeEnabled, activeCategory, mounted]);
+  }, [activeCards, preselectedIds, preSelectModeEnabled, activeCategory, mounted]);
 
   const categories = useMemo(
     () => ["All", ...Array.from(new Set(activeCards.map((c) => c.category)))],
@@ -142,16 +147,16 @@ export default function PecsBoard() {
     setDragCardId(null);
   };
 
-  const togglePreselect = async (card: Card) => {
-    const newVal = card.preselected === 1 ? 0 : 1;
-    await fetch(`/api/cards/${card.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ preselected: newVal === 1 }),
+  const togglePreselect = useCallback((card: Card) => {
+    setPreselectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(card.id)) next.delete(card.id);
+      else next.add(card.id);
+      localStorage.setItem("pecs:preselected-ids", JSON.stringify([...next]));
+      return next;
     });
-    setCards((prev) => prev.map((c) => (c.id === card.id ? { ...c, preselected: newVal } : c)));
     setMenuCard(null);
-  };
+  }, []);
 
   const exitEditMode = useCallback(() => {
     setEditingLabel(null);
@@ -389,11 +394,11 @@ export default function PecsBoard() {
                     className={`relative flex flex-col items-center rounded-3xl transition-all select-none ${
                       mode === "child" ? "cursor-pointer" : "cursor-default"
                     } ${tappedId === card.id ? "scale-90" : "scale-100"} ${
-                      card.preselected === 1 ? "bg-violet-50 shadow-violet-100" : "bg-white shadow-blue-50"
+                      preselectedIds.has(card.id) ? "bg-violet-50 shadow-violet-100" : "bg-white shadow-blue-50"
                     } shadow-lg`}
-                    style={{ border: `3px solid ${card.preselected === 1 ? "#c4b5fd" : "#bfdbfe"}` }}
+                    style={{ border: `3px solid ${preselectedIds.has(card.id) ? "#c4b5fd" : "#bfdbfe"}` }}
                   >
-                    {card.preselected === 1 && <span className="absolute top-2 left-2 text-sm">⭐</span>}
+                    {preselectedIds.has(card.id) && <span className="absolute top-2 left-2 text-sm">⭐</span>}
                     {mode === "parent" && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setMenuCard(card); }}
@@ -593,10 +598,10 @@ export default function PecsBoard() {
                   <button
                     onClick={() => togglePreselect(menuCard)}
                     className={`w-full py-4 rounded-2xl font-bold text-base ${
-                      menuCard.preselected === 1 ? "bg-violet-500 text-white active:bg-violet-600" : "bg-violet-100 text-violet-700 active:bg-violet-200"
+                      preselectedIds.has(menuCard.id) ? "bg-violet-500 text-white active:bg-violet-600" : "bg-violet-100 text-violet-700 active:bg-violet-200"
                     }`}
                   >
-                    {menuCard.preselected === 1 ? "⭐ Remove from preselect" : "☆ Add to preselect"}
+                    {preselectedIds.has(menuCard.id) ? "⭐ Remove from preselect" : "☆ Add to preselect"}
                   </button>
                   <button onClick={() => deleteCard(menuCard)} className="w-full py-4 rounded-2xl bg-red-50 text-red-500 font-bold text-base active:bg-red-100 border border-red-200">
                     🗑 Remove card
