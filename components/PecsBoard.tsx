@@ -62,6 +62,7 @@ export default function PecsBoard() {
   const [arasaacSearching, setArasaacSearching] = useState(false);
   const [selectedPictogram, setSelectedPictogram] = useState<ArasaacResult | null>(null);
 
+  const [installPrompt, setInstallPrompt] = useState<Event & { prompt(): Promise<void>; userChoice: Promise<{ outcome: string }> } | null>(null);
   const [toast, setToast] = useState("");
   const toastTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -77,6 +78,15 @@ export default function PecsBoard() {
     const data = await res.json();
     if (Array.isArray(data)) setCards(data);
     setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as Event & { prompt(): Promise<void>; userChoice: Promise<{ outcome: string }> });
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
   useEffect(() => {
@@ -237,6 +247,21 @@ export default function PecsBoard() {
           🗣️ PECS Board
         </span>
         <div className="flex items-center gap-3">
+
+          {/* Install PWA button */}
+          {installPrompt && (
+            <button
+              onClick={async () => {
+                await installPrompt.prompt();
+                const { outcome } = await installPrompt.userChoice;
+                if (outcome === "accepted") setInstallPrompt(null);
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-sm bg-white text-blue-600 border-2 border-white/70 active:bg-blue-50 transition-all"
+            >
+              <span className="text-base leading-none">⬇️</span>
+              <span className="hidden sm:inline">Install App</span>
+            </button>
+          )}
 
           {/* Preselect toggle */}
           <button
