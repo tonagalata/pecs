@@ -227,30 +227,38 @@ export default function PecsBoard() {
     <div className="h-full flex flex-col">
 
       {/* ─── Header ─── */}
-      <div className={`flex-none flex items-center justify-between px-4 py-3 ${mode === "parent" ? "bg-violet-600" : "bg-blue-500"}`}>
-        <span className="text-white font-bold text-lg" style={{ fontFamily: "'Baloo 2', cursive" }}>
+      <div className={`flex-none flex items-center justify-between px-4 py-4 ${mode === "parent" ? "bg-violet-600" : "bg-blue-500"}`}>
+        <span className="text-white font-bold text-xl" style={{ fontFamily: "'Baloo 2', cursive" }}>
           🗣️ PECS Board
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+
+          {/* Preselect toggle */}
           <button
             onClick={() => setPreSelectModeEnabled((v) => !v)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border-2 ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-sm transition-all border-2 ${
               preSelectModeEnabled
-                ? "border-white/60 bg-white/20 text-white"
-                : "border-white/30 bg-white/10 text-white/60"
+                ? "border-white/70 bg-white/25 text-white"
+                : "border-white/30 bg-white/10 text-white/50"
             }`}
           >
-            <span className={`relative w-6 h-3.5 rounded-full flex items-center transition-all ${preSelectModeEnabled ? "bg-white/60" : "bg-white/20"}`}>
-              <span className={`absolute w-2.5 h-2.5 rounded-full bg-white shadow transition-all ${preSelectModeEnabled ? "left-3" : "left-0.5"}`} />
+            {/* Toggle pill */}
+            <span className={`relative w-10 h-6 rounded-full flex items-center flex-none transition-colors duration-200 ${preSelectModeEnabled ? "bg-white/70" : "bg-white/25"}`}>
+              <span className={`absolute w-5 h-5 rounded-full bg-white shadow-md transition-all duration-200 ${preSelectModeEnabled ? "left-[18px]" : "left-0.5"}`} />
             </span>
-            🎯
+            <span className="text-base leading-none">🎯</span>
+            <span className="hidden sm:inline">{preSelectModeEnabled ? "Preselect on" : "Preselect off"}</span>
           </button>
+
+          {/* Mode toggle */}
           <button
             onClick={() => setMode((m) => m === "child" ? "parent" : "child")}
-            className="px-3 py-1.5 rounded-full text-xs font-bold bg-white/20 text-white border-2 border-white/40"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-sm bg-white/20 text-white border-2 border-white/50 active:bg-white/30 transition-all"
           >
-            {mode === "child" ? "👩 Parent" : "👦 Child"}
+            <span className="text-base leading-none">{mode === "child" ? "👩" : "👦"}</span>
+            <span>{mode === "child" ? "Parent" : "Child"}</span>
           </button>
+
         </div>
       </div>
 
@@ -306,7 +314,7 @@ export default function PecsBoard() {
             onDragOver={(e) => { e.preventDefault(); setDragOverStrip(true); }}
             onDragLeave={() => setDragOverStrip(false)}
             onDrop={handleDrop}
-            className={`flex-1 mx-3 mb-3 rounded-2xl border-4 border-dashed transition-all flex flex-wrap items-start content-start gap-2 p-3 overflow-y-auto min-h-[260px] max-h-[36vh] lg:max-h-none lg:min-h-0 ${
+            className={`flex-1 mx-3 mb-3 rounded-2xl border-4 border-dashed transition-all flex flex-wrap items-start content-start gap-2 p-3 overflow-y-auto min-h-[180px] max-h-[36vh] lg:max-h-none lg:min-h-0 ${
               dragOverStrip ? "border-green-400 bg-green-50" : "border-amber-300 bg-amber-100/50"
             }`}
           >
