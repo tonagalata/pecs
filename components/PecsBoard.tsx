@@ -24,9 +24,27 @@ function arasaacUrl(id: number) {
   return `https://static.arasaac.org/pictograms/${id}/${id}_500.png`;
 }
 
+const CATEGORY_EMOJI: Record<string, string> = {
+  All:      "🌈",
+  Food:     "🍎",
+  Actions:  "🏃",
+  Feelings: "😊",
+  Places:   "🏠",
+  People:   "👨‍👩‍👧",
+  Objects:  "🧸",
+  ABCs:     "🔤",
+  Numbers:  "🔢",
+  Custom:   "⭐",
+};
+
 function CardImage({ card, className }: { card: Card; className: string }) {
   if (card.pictogram_id) {
     return <img src={arasaacUrl(card.pictogram_id)} alt={card.label} className={className} />;
+  }
+  if (card.emoji === "__photo__") {
+    const url = typeof window !== "undefined" ? localStorage.getItem(`pecs:photo:${card.id}`) : null;
+    if (url) return <img src={url} alt={card.label} className={className} />;
+    return <span className="text-4xl leading-none select-none">📷</span>;
   }
   return <span className="text-7xl leading-none select-none">{card.emoji}</span>;
 }
@@ -66,11 +84,65 @@ export default function PecsBoard() {
   const [toast, setToast] = useState("");
   const toastTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Camera
+  const [addMode, setAddMode] = useState<"search" | "camera">("search");
+  const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
+  const [capturedPhotoUrl, setCapturedPhotoUrl] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     if (toastTimeout.current) clearTimeout(toastTimeout.current);
     toastTimeout.current = setTimeout(() => setToast(""), 2800);
   }, []);
+
+  const stopCamera = useCallback(() => {
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach((t) => t.stop());
+      cameraStreamRef.current = null;
+    }
+  }, []);
+
+  const startCamera = useCallback(async () => {
+    stopCamera();
+    const constraints = [
+      { video: { facingMode: { exact: "environment" } } },
+      { video: { facingMode: "environment" } },
+    ] as MediaStreamConstraints[];
+    for (const constraint of constraints) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraint);
+        cameraStreamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+        return;
+      } catch { /* try next */ }
+    }
+    showToast("Camera not available");
+  }, [stopCamera, showToast]);
+
+  const capturePhoto = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d")?.drawImage(video, 0, 0);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      setCapturedBlob(blob);
+      setCapturedPhotoUrl(canvas.toDataURL("image/jpeg"));
+      stopCamera();
+    }, "image/jpeg", 0.85);
+  }, [stopCamera]);
+
+  const retakePhoto = useCallback(() => {
+    setCapturedBlob(null);
+    setCapturedPhotoUrl(null);
+    startCamera();
+  }, [startCamera]);
 
   const fetchCards = useCallback(async () => {
     setLoading(true);
@@ -103,6 +175,7 @@ export default function PecsBoard() {
     return () => {
       if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
       stop();
+      cameraStreamRef.current?.getTracks().forEach((t) => t.stop());
     };
   }, [fetchCards]);
 
@@ -198,6 +271,16 @@ export default function PecsBoard() {
     showToast(`"${card.label}" removed`);
   };
 
+  // Start/stop camera based on active tab
+  useEffect(() => {
+    if (showAddSheet && addMode === "camera" && !capturedPhotoUrl) {
+      const t = setTimeout(startCamera, 0);
+      return () => { clearTimeout(t); stopCamera(); };
+    }
+    return () => stopCamera();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAddSheet, addMode, capturedPhotoUrl]);
+
   // Debounced ARASAAC search
   useEffect(() => {
     if (!arasaacQuery.trim()) { setArasaacResults([]); return; }
@@ -221,7 +304,11 @@ export default function PecsBoard() {
     setArasaacResults([]);
     setSelectedPictogram(null);
     setNewLabel("");
-  }, []);
+    setAddMode("search");
+    setCapturedBlob(null);
+    setCapturedPhotoUrl(null);
+    stopCamera();
+  }, [stopCamera]);
 
   const addCard = async () => {
     if (!selectedPictogram || !newLabel.trim()) { showToast("Pick a pictogram and add a label"); return; }
@@ -234,6 +321,31 @@ export default function PecsBoard() {
     setCards((prev) => [...prev, card]);
     closeAddSheet();
     showToast("Card added!");
+  };
+
+  const addPhotoCard = async () => {
+    if (!capturedBlob || !newLabel.trim()) { showToast("Capture a photo and add a label"); return; }
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append("photo", capturedBlob, "photo.jpg");
+      const uploadRes = await fetch("/api/upload-photo", { method: "POST", body: formData });
+      const { url } = await uploadRes.json();
+      const res = await fetch("/api/cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emoji: "__photo__", label: newLabel.trim(), category: newCategory }),
+      });
+      const card = await res.json();
+      localStorage.setItem(`pecs:photo:${card.id}`, url);
+      setCards((prev) => [...prev, card]);
+      closeAddSheet();
+      showToast("Card added!");
+    } catch {
+      showToast("Upload failed");
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   const isPreSelectActive = preSelectModeEnabled && preselectedCount > 0;
@@ -305,38 +417,18 @@ export default function PecsBoard() {
 
         {/* Sentence strip — top strip on mobile, fixed sidebar on desktop */}
         <aside className="flex-none flex flex-col bg-amber-50 border-b-4 border-amber-200 lg:border-b-0 lg:border-r-4 lg:w-80 xl:w-96">
-          <div className="flex items-center justify-between px-4 pt-3 pb-1 flex-none">
+          <div className="flex items-center justify-between px-4 pt-3 pb-2 flex-none">
             <span className="font-bold text-amber-700 text-sm tracking-wide uppercase" style={{ fontFamily: "'Baloo 2', cursive" }}>
-              My Sentence
+              💬 My Sentence
             </span>
-            <div className="flex items-center gap-2">
-              {sentence.length > 0 && (
-                <button
-                  onClick={() => setSentence([])}
-                  className="text-xs px-3 py-1.5 rounded-full font-bold border-2 border-red-300 text-red-500 bg-white active:bg-red-50"
-                >
-                  ✕ Clear
-                </button>
-              )}
+            {sentence.length > 0 && (
               <button
-                onClick={() => {
-                  if (!sentence.length && !isSpeaking) { showToast("Tap a card first!"); return; }
-                  play(sentence.map((c) => c.label).join(" "));
-                }}
-                className="flex items-center gap-2 px-5 py-2 rounded-full font-bold text-sm text-white bg-green-500 hover:bg-green-600 shadow-md active:scale-95 transition-transform"
+                onClick={() => setSentence([])}
+                className="text-xs px-3 py-1.5 rounded-full font-bold border-2 border-red-300 text-red-500 bg-white active:bg-red-50"
               >
-                {isSpeaking ? (
-                  <>
-                    <span className="flex gap-0.5 items-end h-4">
-                      {[0, 1, 2, 3].map((i) => (
-                        <span key={i} className="w-0.5 bg-white rounded-full animate-wave" style={{ animationDelay: `${i * 0.1}s`, height: 10 }} />
-                      ))}
-                    </span>
-                    Speaking…
-                  </>
-                ) : <>🔊 Speak</>}
+                ✕ Clear
               </button>
-            </div>
+            )}
           </div>
 
           {/* Drop zone — fixed height on mobile, fills sidebar on desktop */}
@@ -344,14 +436,15 @@ export default function PecsBoard() {
             onDragOver={(e) => { e.preventDefault(); setDragOverStrip(true); }}
             onDragLeave={() => setDragOverStrip(false)}
             onDrop={handleDrop}
-            className={`flex-1 mx-3 mb-3 rounded-2xl border-4 border-dashed transition-all flex flex-wrap items-start content-start gap-2 p-3 overflow-y-auto min-h-[180px] max-h-[36vh] lg:max-h-none lg:min-h-0 ${
+            className={`flex-1 mx-3 rounded-2xl border-4 border-dashed transition-all flex flex-wrap items-start content-start gap-2 p-3 overflow-y-auto min-h-[130px] max-h-[28vh] lg:max-h-none lg:min-h-0 ${
               dragOverStrip ? "border-green-400 bg-green-50" : "border-amber-300 bg-amber-100/50"
             }`}
           >
             {sentence.length === 0 ? (
-              <div className="w-full h-full flex items-center justify-center min-h-[120px]">
-                <p className="text-amber-300 italic text-sm select-none pointer-events-none text-center leading-relaxed">
-                  Tap a picture card below{"\n"}to start your sentence
+              <div className="w-full h-full flex flex-col items-center justify-center gap-2 min-h-[100px]">
+                <span className="text-4xl">👇</span>
+                <p className="text-amber-400 font-bold text-sm select-none pointer-events-none text-center leading-relaxed">
+                  Tap a card to start!
                 </p>
               </div>
             ) : (
@@ -359,13 +452,44 @@ export default function PecsBoard() {
                 <button
                   key={`${card.id}-${idx}`}
                   onClick={() => removeFromSentence(idx)}
-                  className="bg-white rounded-xl border-2 border-green-300 px-3 py-2 flex flex-col items-center gap-1 active:scale-95 transition-transform shadow-sm"
+                  className="bg-white rounded-2xl border-2 border-green-300 px-3 py-2 flex flex-col items-center gap-1 active:scale-90 transition-transform shadow-sm"
                 >
                   <CardImage card={card} className="w-16 h-16 object-contain" />
                   <span className="text-xs font-bold text-green-700 text-center leading-tight">{card.label}</span>
                 </button>
               ))
             )}
+          </div>
+
+          {/* Speak button — prominent in child mode */}
+          <div className="px-3 py-3 flex-none">
+            <button
+              onClick={() => {
+                if (!sentence.length && !isSpeaking) { showToast("Tap a card first!"); return; }
+                play(sentence.map((c) => c.label).join(" "));
+              }}
+              className={`w-full flex items-center justify-center gap-3 rounded-2xl font-extrabold transition-all active:scale-95 shadow-md ${
+                mode === "child"
+                  ? "py-5 text-xl bg-green-500 text-white active:bg-green-600 shadow-green-200"
+                  : "py-3 text-base bg-green-500 text-white active:bg-green-600"
+              } ${isSpeaking ? "bg-green-400" : ""}`}
+            >
+              {isSpeaking ? (
+                <>
+                  <span className="flex gap-1 items-end h-5">
+                    {[0, 1, 2, 3].map((i) => (
+                      <span key={i} className="w-1 bg-white rounded-full animate-wave" style={{ animationDelay: `${i * 0.1}s`, height: 12 }} />
+                    ))}
+                  </span>
+                  <span>Speaking…</span>
+                </>
+              ) : (
+                <>
+                  <span className={mode === "child" ? "text-2xl" : "text-lg"}>🔊</span>
+                  <span>Speak</span>
+                </>
+              )}
+            </button>
           </div>
         </aside>
 
@@ -379,13 +503,14 @@ export default function PecsBoard() {
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`flex-none px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
+                  className={`flex-none flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-bold text-sm transition-all whitespace-nowrap active:scale-95 ${
                     activeCategory === cat
-                      ? "bg-blue-500 text-white shadow-sm"
-                      : "bg-blue-50 text-blue-600 border border-blue-100"
+                      ? "bg-blue-500 text-white shadow-md scale-105"
+                      : "bg-blue-50 text-blue-600 border-2 border-blue-100 hover:border-blue-300"
                   }`}
                 >
-                  {cat}
+                  <span className="text-base leading-none">{CATEGORY_EMOJI[cat] ?? "📂"}</span>
+                  <span>{cat}</span>
                 </button>
               ))}
             </div>
@@ -408,7 +533,7 @@ export default function PecsBoard() {
             ) : visibleCards.length === 0 ? (
               <div className="text-center py-16 text-gray-300 text-sm italic">No cards available.</div>
             ) : (
-              <div className="grid gap-3 sm:gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))" }}>
+              <div className="grid gap-3 sm:gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
                 {visibleCards.map((card) => (
                   <div
                     key={card.id}
@@ -416,10 +541,10 @@ export default function PecsBoard() {
                     onDragStart={() => handleDragStart(card.id)}
                     onDragEnd={handleDragEnd}
                     onClick={() => { if (mode === "child") addToSentence(card); }}
-                    className={`relative flex flex-col items-center rounded-3xl transition-all select-none ${
-                      mode === "child" ? "cursor-pointer" : "cursor-default"
-                    } ${tappedId === card.id ? "scale-90" : "scale-100"} ${
-                      preselectedIds.has(card.id) ? "bg-violet-50 shadow-violet-100" : "bg-white shadow-blue-50"
+                    className={`relative flex flex-col items-center rounded-3xl select-none transition-transform duration-100 ${
+                      mode === "child" ? "cursor-pointer active:scale-90" : "cursor-default"
+                    } ${tappedId === card.id ? "scale-90 animate-tap" : "scale-100"} ${
+                      preselectedIds.has(card.id) ? "bg-violet-50" : "bg-white"
                     } shadow-lg`}
                     style={{ border: `3px solid ${preselectedIds.has(card.id) ? "#c4b5fd" : "#bfdbfe"}` }}
                   >
@@ -427,17 +552,17 @@ export default function PecsBoard() {
                     {mode === "parent" && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setMenuCard(card); }}
-                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-gray-100 active:bg-gray-200 text-gray-500 text-base font-bold flex items-center justify-center"
+                        className="absolute top-2 right-2 w-9 h-9 rounded-full bg-gray-100 active:bg-gray-200 text-gray-500 text-base font-bold flex items-center justify-center"
                       >
                         ···
                       </button>
                     )}
-                    <div className="pt-6 pb-4 px-3 flex flex-col items-center gap-2 w-full">
-                      <CardImage card={card} className="w-20 h-20 sm:w-24 sm:h-24 object-contain" />
-                      <span className="text-sm sm:text-base font-extrabold text-gray-800 text-center leading-snug">{card.label}</span>
+                    <div className="pt-7 pb-5 px-3 flex flex-col items-center gap-3 w-full">
+                      <CardImage card={card} className="w-24 h-24 sm:w-28 sm:h-28 object-contain drop-shadow-sm" />
+                      <span className="text-base sm:text-lg font-extrabold text-gray-800 text-center leading-snug">{card.label}</span>
                       {mode === "parent" && (
                         <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-500 border border-blue-100">
-                          {card.category}
+                          {CATEGORY_EMOJI[card.category] ?? "📂"} {card.category}
                         </span>
                       )}
                     </div>
@@ -470,67 +595,154 @@ export default function PecsBoard() {
             <div className="w-full max-w-lg pointer-events-auto bg-white rounded-t-3xl lg:rounded-3xl shadow-2xl animate-slideup lg:animate-pop max-h-[90vh] flex flex-col">
               <div className="px-6 pt-5 pb-3 border-b border-gray-100 flex-none">
                 <p className="font-extrabold text-gray-800 text-lg">➕ Add a card</p>
-                <p className="text-xs text-gray-400 mt-0.5">Search ARASAAC pictograms</p>
               </div>
-              <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={arasaacQuery}
-                    onChange={(e) => setArasaacQuery(e.target.value)}
-                    placeholder="Search pictograms… e.g. apple, play, happy"
-                    className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-base outline-none focus:border-blue-400 pr-12"
-                    autoFocus
-                  />
-                  {arasaacSearching && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
-                  )}
-                </div>
-                {arasaacResults.length > 0 && (
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {arasaacResults.map((pic) => (
-                      <button
-                        key={pic._id}
-                        onClick={() => { setSelectedPictogram(pic); setNewLabel(pic.keywords[0]?.keyword ?? ""); }}
-                        className={`flex flex-col items-center p-2 rounded-2xl border-2 transition-all active:scale-95 ${
-                          selectedPictogram?._id === pic._id ? "border-blue-500 bg-blue-50 shadow-md" : "border-gray-100 bg-white"
-                        }`}
-                      >
-                        <img src={arasaacUrl(pic._id)} alt={pic.keywords[0]?.keyword ?? ""} className="w-14 h-14 object-contain" />
-                        <span className="text-xs text-gray-500 text-center leading-tight mt-1 w-full truncate">{pic.keywords[0]?.keyword}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {selectedPictogram && (
-                  <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-2xl border-2 border-blue-200">
-                    <img src={arasaacUrl(selectedPictogram._id)} alt="" className="w-16 h-16 object-contain flex-none" />
-                    <input
-                      type="text"
-                      value={newLabel}
-                      onChange={(e) => setNewLabel(e.target.value)}
-                      placeholder="Label for this card"
-                      className="flex-1 border-2 border-blue-200 rounded-xl px-3 py-2 text-base outline-none focus:border-blue-400 bg-white"
-                      onKeyDown={(e) => e.key === "Enter" && addCard()}
-                    />
-                  </div>
-                )}
-                <select
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                  className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-base outline-none focus:border-blue-400"
-                >
-                  {["Food", "Actions", "Feelings", "Places", "People", "Objects", "Custom"].map((c) => (
-                    <option key={c}>{c}</option>
-                  ))}
-                </select>
+
+              {/* Tab switcher */}
+              <div className="flex gap-2 px-6 pt-4 pb-1 flex-none">
                 <button
-                  onClick={addCard}
-                  disabled={!selectedPictogram}
-                  className="w-full py-4 rounded-2xl bg-green-500 text-white font-bold text-base active:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                  onClick={() => { setAddMode("search"); stopCamera(); setCapturedBlob(null); setCapturedPhotoUrl(null); }}
+                  className={`flex-1 py-2.5 rounded-2xl font-bold text-sm transition-all ${addMode === "search" ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-500 active:bg-gray-200"}`}
                 >
-                  Add card
+                  🔍 Pictogram
                 </button>
+                <button
+                  onClick={() => setAddMode("camera")}
+                  className={`flex-1 py-2.5 rounded-2xl font-bold text-sm transition-all ${addMode === "camera" ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-500 active:bg-gray-200"}`}
+                >
+                  📷 Camera
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
+
+                {/* ── Pictogram search mode ── */}
+                {addMode === "search" && (
+                  <>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={arasaacQuery}
+                        onChange={(e) => setArasaacQuery(e.target.value)}
+                        placeholder="Search pictograms… e.g. apple, play, happy"
+                        className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-base outline-none focus:border-blue-400 pr-12"
+                        autoFocus
+                      />
+                      {arasaacSearching && (
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
+                      )}
+                    </div>
+                    {arasaacResults.length > 0 && (
+                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                        {arasaacResults.map((pic) => (
+                          <button
+                            key={pic._id}
+                            onClick={() => { setSelectedPictogram(pic); setNewLabel(pic.keywords[0]?.keyword ?? ""); }}
+                            className={`flex flex-col items-center p-2 rounded-2xl border-2 transition-all active:scale-95 ${
+                              selectedPictogram?._id === pic._id ? "border-blue-500 bg-blue-50 shadow-md" : "border-gray-100 bg-white"
+                            }`}
+                          >
+                            <img src={arasaacUrl(pic._id)} alt={pic.keywords[0]?.keyword ?? ""} className="w-14 h-14 object-contain" />
+                            <span className="text-xs text-gray-500 text-center leading-tight mt-1 w-full truncate">{pic.keywords[0]?.keyword}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {selectedPictogram && (
+                      <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-2xl border-2 border-blue-200">
+                        <img src={arasaacUrl(selectedPictogram._id)} alt="" className="w-16 h-16 object-contain flex-none" />
+                        <input
+                          type="text"
+                          value={newLabel}
+                          onChange={(e) => setNewLabel(e.target.value)}
+                          placeholder="Label for this card"
+                          className="flex-1 border-2 border-blue-200 rounded-xl px-3 py-2 text-base outline-none focus:border-blue-400 bg-white"
+                          onKeyDown={(e) => e.key === "Enter" && addCard()}
+                        />
+                      </div>
+                    )}
+                    <select
+                      value={newCategory}
+                      onChange={(e) => setNewCategory(e.target.value)}
+                      className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-base outline-none focus:border-blue-400"
+                    >
+                      {["Food", "Actions", "Feelings", "Places", "People", "Objects", "Custom"].map((c) => (
+                        <option key={c}>{c}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={addCard}
+                      disabled={!selectedPictogram}
+                      className="w-full py-4 rounded-2xl bg-green-500 text-white font-bold text-base active:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Add card
+                    </button>
+                  </>
+                )}
+
+                {/* ── Camera mode ── */}
+                {addMode === "camera" && (
+                  <>
+                    {!capturedPhotoUrl ? (
+                      <>
+                        <div className="relative rounded-2xl overflow-hidden bg-black" style={{ aspectRatio: "4/3" }}>
+                          <video
+                            ref={videoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <button
+                          onClick={capturePhoto}
+                          className="w-full py-4 rounded-2xl bg-blue-500 text-white font-bold text-lg active:bg-blue-600"
+                        >
+                          📸 Capture
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="rounded-2xl overflow-hidden bg-black" style={{ aspectRatio: "4/3" }}>
+                          <img src={capturedPhotoUrl} alt="Captured" className="w-full h-full object-cover" />
+                        </div>
+                        <input
+                          type="text"
+                          value={newLabel}
+                          onChange={(e) => setNewLabel(e.target.value)}
+                          placeholder="Label for this card"
+                          className="w-full border-2 border-blue-200 rounded-2xl px-4 py-3 text-base outline-none focus:border-blue-400"
+                          autoFocus
+                          onKeyDown={(e) => e.key === "Enter" && addPhotoCard()}
+                        />
+                        <select
+                          value={newCategory}
+                          onChange={(e) => setNewCategory(e.target.value)}
+                          className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-base outline-none focus:border-blue-400"
+                        >
+                          {["Food", "Actions", "Feelings", "Places", "People", "Objects", "Custom"].map((c) => (
+                            <option key={c}>{c}</option>
+                          ))}
+                        </select>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={retakePhoto}
+                            className="flex-1 py-4 rounded-2xl bg-gray-100 text-gray-600 font-bold text-base active:bg-gray-200"
+                          >
+                            ↩ Retake
+                          </button>
+                          <button
+                            onClick={addPhotoCard}
+                            disabled={uploadingPhoto || !newLabel.trim()}
+                            className="flex-[2] py-4 rounded-2xl bg-green-500 text-white font-bold text-base active:bg-green-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            {uploadingPhoto ? "Uploading…" : "Add card"}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+
                 <button onClick={closeAddSheet} className="w-full py-3 rounded-2xl bg-gray-100 text-gray-500 font-bold text-sm active:bg-gray-200">
                   Cancel
                 </button>
@@ -641,6 +853,9 @@ export default function PecsBoard() {
         </>
       )}
 
+      {/* Hidden canvas for photo capture */}
+      <canvas ref={canvasRef} className="hidden" />
+
       {/* Toast */}
       {toast && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full text-sm font-semibold shadow-xl z-50 animate-pop whitespace-nowrap">
@@ -656,6 +871,8 @@ export default function PecsBoard() {
         .animate-slideup { animation: slideup 0.22s ease; }
         @keyframes wave { 0%,100% { height: 4px; } 50% { height: 14px; } }
         .animate-wave { animation: wave 0.7s ease-in-out infinite; }
+        @keyframes tap { 0% { transform: scale(0.88); } 60% { transform: scale(1.04); } 100% { transform: scale(1); } }
+        .animate-tap { animation: tap 0.28s ease; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .border-3 { border-width: 3px; }
