@@ -67,6 +67,8 @@ export default function PecsBoard() {
   const [tappedId, setTappedId] = useState<number | null>(null);
   // Defer shuffle to client only — avoids SSR/client hydration mismatch from Math.random()
   const [mounted, setMounted] = useState(false);
+  // Card IDs whose photo URL exists in this device's localStorage
+  const [localPhotoIds, setLocalPhotoIds] = useState<Set<number>>(new Set());
 
   const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { isPlaying, isLoading, play, stop } = useTTS();
@@ -172,6 +174,15 @@ export default function PecsBoard() {
       const savedIds = JSON.parse(localStorage.getItem("pecs:preselected-ids") ?? "[]");
       if (Array.isArray(savedIds)) setPreselectedIds(new Set(savedIds));
     } catch { /* ignore */ }
+    const photoIds = new Set<number>();
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith("pecs:photo:")) {
+        const id = parseInt(key.slice("pecs:photo:".length), 10);
+        if (!isNaN(id)) photoIds.add(id);
+      }
+    }
+    setLocalPhotoIds(photoIds);
     return () => {
       if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
       stop();
@@ -183,7 +194,15 @@ export default function PecsBoard() {
   useEffect(() => { localStorage.setItem("pecs:preselect", String(preSelectModeEnabled)); }, [preSelectModeEnabled]);
 
   // Single base filter — reused by preselectedCount, visibleCards, and categories
-  const activeCards = useMemo(() => cards.filter((c) => c.status === "active"), [cards]);
+  // Photo cards are excluded on devices that don't have the R2 URL in localStorage
+  const activeCards = useMemo(
+    () => cards.filter((c) => {
+      if (c.status !== "active") return false;
+      if (c.emoji === "__photo__" && !localPhotoIds.has(c.id)) return false;
+      return true;
+    }),
+    [cards, localPhotoIds]
+  );
 
   const preselectedCount = useMemo(
     () => activeCards.filter((c) => preselectedIds.has(c.id)).length,
@@ -338,6 +357,7 @@ export default function PecsBoard() {
       });
       const card = await res.json();
       localStorage.setItem(`pecs:photo:${card.id}`, url);
+      setLocalPhotoIds((prev) => new Set(prev).add(card.id));
       setCards((prev) => [...prev, card]);
       closeAddSheet();
       showToast("Card added!");
