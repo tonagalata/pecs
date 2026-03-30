@@ -1,4 +1,58 @@
 @import "tailwindcss";
+@import "driver.js/dist/driver.css";
+
+/* ── Driver.js tour overrides — friendly, rounded, colourful ── */
+.driver-popover {
+  border-radius: 20px !important;
+  font-family: "Nunito", sans-serif !important;
+  padding: 20px 22px !important;
+  max-width: 320px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18) !important;
+}
+.driver-popover-title {
+  font-size: 1.1rem !important;
+  font-weight: 900 !important;
+  color: #1e3a5f !important;
+  margin-bottom: 6px !important;
+}
+.driver-popover-description {
+  font-size: 0.92rem !important;
+  font-weight: 600 !important;
+  color: #4b5563 !important;
+  line-height: 1.5 !important;
+}
+.driver-popover-footer {
+  margin-top: 14px !important;
+}
+.driver-popover-next-btn,
+.driver-popover-done-btn {
+  background: #3b82f6 !important;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 8px 18px !important;
+  font-family: "Nunito", sans-serif !important;
+  font-weight: 800 !important;
+  font-size: 0.85rem !important;
+  color: #fff !important;
+  cursor: pointer !important;
+}
+.driver-popover-prev-btn {
+  background: #f3f4f6 !important;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 8px 18px !important;
+  font-family: "Nunito", sans-serif !important;
+  font-weight: 800 !important;
+  font-size: 0.85rem !important;
+  color: #6b7280 !important;
+  cursor: pointer !important;
+}
+.driver-popover-progress-text {
+  font-family: "Nunito", sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 0.8rem !important;
+  color: #9ca3af !important;
+}
 
 @theme inline {
   --font-nunito: "Nunito", sans-serif;

@@ -39,7 +39,16 @@ export function useTTS(voiceId?: string): UseTTSResult {
   const voiceIdRef = useRef(voiceId);
   voiceIdRef.current = voiceId;
 
+  // Queue of phrases waiting to be spoken
+  const queueRef = useRef<string[]>([]);
+  // Whether we're currently playing or loading (ref so callbacks always see latest)
+  const busyRef = useRef(false);
+  // Stable ref to playPhrase so onended callbacks don't go stale
+  const playPhraseRef = useRef<((phrase: string) => Promise<void>) | null>(null);
+
   const stop = useCallback(() => {
+    queueRef.current = [];
+    busyRef.current = false;
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -49,8 +58,17 @@ export function useTTS(voiceId?: string): UseTTSResult {
     setIsLoading(false);
   }, []);
 
-  const playBrowser = useCallback((phrase: string) => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
+  // Called when a phrase finishes — plays the next queued item if any
+  const playNext = useCallback(() => {
+    busyRef.current = false;
+    setIsPlaying(false);
+    setIsLoading(false);
+    const next = queueRef.current.shift();
+    if (next) playPhraseRef.current?.(next);
+  }, []);
+
+  const playBrowser = useCallback((phrase: string, onEnd: () => void) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) { onEnd(); return; }
     window.speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(phrase);
     utt.rate = 0.82;
@@ -59,79 +77,82 @@ export function useTTS(voiceId?: string): UseTTSResult {
     const voice = getBrowserVoice();
     if (voice) utt.voice = voice;
     setIsPlaying(true);
-    utt.onend = () => setIsPlaying(false);
-    utt.onerror = () => setIsPlaying(false);
+    setIsLoading(false);
+    utt.onend = () => onEnd();
+    utt.onerror = () => onEnd();
     window.speechSynthesis.speak(utt);
   }, []);
 
-  const play = useCallback(
-    async (phrase: string) => {
-      if (!phrase.trim()) return;
+  const playPhrase = useCallback(async (phrase: string) => {
+    busyRef.current = true;
 
-      if (isPlaying || isLoading) {
-        stop();
+    const launchAudio = (url: string) => {
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      setIsPlaying(true);
+      setIsLoading(false);
+      audio.onended = () => { audioRef.current = null; playNext(); };
+      audio.onerror = () => { audioRef.current = null; playBrowser(phrase, playNext); };
+      audio.play().catch(() => playBrowser(phrase, playNext));
+    };
+
+    // 1. In-memory cache (synchronous, fastest — device)
+    const memHit = memCache.get(phrase);
+    if (memHit) { launchAudio(memHit); return; }
+
+    // 2. IndexedDB cache (async, device storage — avoids network)
+    try {
+      const idbHit = await getCachedUrl(phrase);
+      if (idbHit) {
+        memCache.set(phrase, idbHit);
+        launchAudio(idbHit);
         return;
       }
+    } catch {
+      // IDB unavailable — fall through to API
+    }
 
-      const launchAudio = (url: string) => {
-        if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-        const audio = new Audio(url);
-        audioRef.current = audio;
-        setIsPlaying(true);
-        audio.onended = () => { setIsPlaying(false); audioRef.current = null; };
-        audio.onerror = () => { setIsPlaying(false); audioRef.current = null; playBrowser(phrase); };
-        audio.play().catch(() => playBrowser(phrase));
-      };
+    // 3. API (Turso server cache or Resemble generation)
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phrase, voiceId: voiceIdRef.current }),
+      });
 
-      // 1. In-memory cache (synchronous, fastest)
-      const memHit = memCache.get(phrase);
-      if (memHit) {
-        launchAudio(memHit);
-        return;
-      }
-
-      // 2. IndexedDB cache (async, avoids network)
-      try {
-        const idbHit = await getCachedUrl(phrase);
-        if (idbHit) {
-          memCache.set(phrase, idbHit);
-          launchAudio(idbHit);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.url) {
+          const url = json.url as string;
+          memCache.set(phrase, url);
+          setCachedUrl(phrase, url).catch(() => {});
+          launchAudio(url);
           return;
         }
-      } catch {
-        // IDB unavailable — fall through to API
       }
+    } catch {
+      // network failure or API error
+    }
 
-      // 3. API (Turso server cache or Resemble generation)
-      setIsLoading(true);
-      try {
-        const res = await fetch("/api/tts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phrase, voiceId: voiceIdRef.current }),
-        });
+    setIsLoading(false);
+    // 4. Browser speech fallback
+    playBrowser(phrase, playNext);
+  }, [playBrowser, playNext]);
 
-        if (res.ok) {
-          const json = await res.json();
-          if (json.url) {
-            const url = json.url as string;
-            memCache.set(phrase, url);
-            setCachedUrl(phrase, url).catch(() => {});
-            setIsLoading(false);
-            launchAudio(url);
-            return;
-          }
-        }
-      } catch {
-        // network failure or API error
-      }
+  // Keep ref current so onended callbacks always call the latest version
+  playPhraseRef.current = playPhrase;
 
-      setIsLoading(false);
-      // 4. Browser speech fallback
-      playBrowser(phrase);
-    },
-    [isPlaying, isLoading, stop, playBrowser]
-  );
+  const play = useCallback((phrase: string) => {
+    if (!phrase.trim()) return;
+    // If busy, queue the phrase — it will play after the current one finishes
+    if (busyRef.current) {
+      queueRef.current.push(phrase);
+      return;
+    }
+    playPhrase(phrase);
+  }, [playPhrase]);
 
   return { isPlaying, isLoading, play, stop };
 }

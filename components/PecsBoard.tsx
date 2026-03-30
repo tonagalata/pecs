@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useTTS } from "@/hooks/useTTS";
+import { useTour } from "@/hooks/useTour";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -116,10 +117,15 @@ export default function PecsBoard() {
 
   // Voice settings
   const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [autoSentence, setAutoSentence] = useState(false);
   const [testVoiceOutput, setTestVoiceOutput] = useState("");
 
   // Child board filter
   const [showPreselectedOnly, setShowPreselectedOnly] = useState(false);
+
+  // Category visibility (ABCs / Numbers hidden by default)
+  const [showABCs, setShowABCs] = useState(false);
+  const [showNumbers, setShowNumbers] = useState(false);
 
   // Child lock/settings
   const [showChildSettings, setShowChildSettings] = useState(false);
@@ -140,6 +146,7 @@ export default function PecsBoard() {
 
   const { isPlaying, isLoading, play, stop } = useTTS();
   const isSpeaking = isPlaying || isLoading;
+  useTour(mode, parentTab);
 
   // ── Helpers ──
   const showToast = useCallback((msg: string) => {
@@ -211,6 +218,10 @@ export default function PecsBoard() {
       if (Array.isArray(ids)) setPreselectedIds(new Set(ids));
     } catch { /* ignore */ }
 
+    setShowABCs(localStorage.getItem("pecs:show-abcs") === "true");
+    setShowNumbers(localStorage.getItem("pecs:show-numbers") === "true");
+    setAutoSentence(localStorage.getItem("pecs:auto-sentence") === "true");
+
     const photoIds = new Set<number>();
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -250,9 +261,15 @@ export default function PecsBoard() {
   );
 
   // Main grid cards — Starters are excluded (they live in their own row)
+  // ABCs and Numbers are hidden unless their toggles are on
   const mainCards = useMemo(
-    () => activeCards.filter((c) => c.category !== "Starters"),
-    [activeCards]
+    () => activeCards.filter((c) => {
+      if (c.category === "Starters") return false;
+      if (c.category === "ABCs" && !showABCs) return false;
+      if (c.category === "Numbers" && !showNumbers) return false;
+      return true;
+    }),
+    [activeCards, showABCs, showNumbers]
   );
 
   const preselectedCards = useMemo(
@@ -289,13 +306,26 @@ export default function PecsBoard() {
   );
 
   // ── Interaction handlers ──
+  // Ref so addToSentence can read the latest sentence without it being a dep
+  const sentenceRef = useRef<Card[]>([]);
+  useEffect(() => { sentenceRef.current = sentence; }, [sentence]);
+
   const addToSentence = useCallback((card: Card) => {
     setTappedId(card.id);
     if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
     tapTimeoutRef.current = setTimeout(() => setTappedId(null), 280);
-    setSentence((prev) => [...prev, card]);
-    if (ttsEnabled) play(card.label);
-  }, [ttsEnabled, play]);
+    const newSentence = [...sentenceRef.current, card];
+    setSentence(newSentence);
+    if (ttsEnabled) {
+      if (autoSentence && newSentence.length > 1) {
+        // Interrupt current audio and speak the full running sentence
+        stop();
+        play(newSentence.map((c) => c.label).join(" "));
+      } else {
+        play(card.label);
+      }
+    }
+  }, [ttsEnabled, autoSentence, play, stop]);
 
   const togglePreselect = useCallback((cardId: number) => {
     setPreselectedIds((prev) => {
@@ -414,7 +444,7 @@ export default function PecsBoard() {
       <div className="h-full flex flex-col" style={{ background: "#F0F7FF", fontFamily: "'Nunito', sans-serif" }}>
 
         {/* Sentence Strip */}
-        <div className="flex-none bg-white border-b-2 border-sky-100 px-3 py-2.5 min-h-[72px] flex items-center gap-2">
+        <div id="tour-sentence-strip" className="flex-none bg-white border-b-2 border-sky-100 px-3 py-2.5 min-h-[72px] flex items-center gap-2">
           {sentence.length === 0 ? (
             <p className="text-gray-400 text-sm font-semibold flex-1 text-center select-none">
               Tap a card to start building your message…
@@ -463,18 +493,18 @@ export default function PecsBoard() {
 
         {/* Starter Cards Row */}
         {starterCards.length > 0 && (
-          <div className="flex-none flex gap-2 px-3 pt-3 pb-1 overflow-x-auto no-scrollbar">
+          <div id="tour-starter-cards" className="flex-none flex gap-2 px-3 pt-3 pb-2 overflow-x-auto no-scrollbar">
             {starterCards.map((card) => {
               const [border, bg] = getCardColors(card.category);
               return (
                 <button
                   key={card.id}
                   onClick={() => addToSentence(card)}
-                  className="flex-none flex items-center gap-2 rounded-2xl px-3 py-2 shadow-sm active:scale-90 transition-transform"
-                  style={{ border: `2.5px solid ${border}`, backgroundColor: bg }}
+                  className="flex-none flex flex-col items-center gap-1.5 rounded-2xl px-3 py-3 shadow-sm active:scale-90 transition-transform"
+                  style={{ border: `2.5px solid ${border}`, backgroundColor: bg, minWidth: 72 }}
                 >
-                  <CardImage card={card} className="w-8 h-8 object-contain" />
-                  <span className="font-extrabold text-blue-800 text-sm whitespace-nowrap">{card.label}</span>
+                  <CardImage card={card} className="w-14 h-14 object-contain" />
+                  <span className="font-extrabold text-blue-800 text-xs whitespace-nowrap">{card.label}</span>
                 </button>
               );
             })}
@@ -482,7 +512,7 @@ export default function PecsBoard() {
         )}
 
         {/* Card Grid */}
-        <div className="flex-1 overflow-y-auto p-3">
+        <div id="tour-card-grid" className="flex-1 overflow-y-auto p-3">
           {loading ? (
             <div className="flex justify-center py-16">
               <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
@@ -511,22 +541,42 @@ export default function PecsBoard() {
 
         {/* Footer */}
         <div className="flex-none flex items-center justify-between px-4 py-3 bg-white border-t border-gray-100">
-          {/* Preselected toggle */}
-          <button
-            onClick={() => setShowPreselectedOnly((v) => !v)}
-            disabled={preselectedCards.length === 0}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-              showPreselectedOnly && preselectedCards.length > 0
-                ? "bg-violet-100 text-violet-600 border border-violet-200"
-                : "bg-gray-100 text-gray-400 border border-transparent"
-            } disabled:opacity-30`}
-          >
-            <span>{showPreselectedOnly ? "⭐" : "☆"}</span>
-            Preselected
-          </button>
+          {/* Left badges */}
+          <div className="flex items-center gap-2">
+            <button
+              id="tour-preselected-badge"
+              onClick={() => setShowPreselectedOnly((v) => !v)}
+              disabled={preselectedCards.length === 0}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                showPreselectedOnly && preselectedCards.length > 0
+                  ? "bg-violet-100 text-violet-600 border border-violet-200"
+                  : "bg-gray-100 text-gray-400 border border-transparent"
+              } disabled:opacity-30`}
+            >
+              <span>{showPreselectedOnly ? "⭐" : "☆"}</span>
+              Preselected
+            </button>
+            <button
+              id="tour-sentence-badge"
+              onClick={() => {
+                const next = !autoSentence;
+                setAutoSentence(next);
+                localStorage.setItem("pecs:auto-sentence", String(next));
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                autoSentence
+                  ? "bg-green-100 text-green-700 border border-green-200"
+                  : "bg-gray-100 text-gray-400 border border-transparent"
+              }`}
+            >
+              <span>{autoSentence ? "💬" : "💭"}</span>
+              Auto Sentence
+            </button>
+          </div>
 
           {/* Lock */}
           <button
+            id="tour-lock-btn"
             onMouseDown={() => { holdTimerRef.current = setTimeout(() => setShowChildSettings(true), 1500); }}
             onMouseUp={() => { if (holdTimerRef.current) clearTimeout(holdTimerRef.current); }}
             onTouchStart={() => { holdTimerRef.current = setTimeout(() => setShowChildSettings(true), 1500); }}
@@ -534,7 +584,7 @@ export default function PecsBoard() {
             className="flex flex-col items-center gap-0.5 opacity-40 select-none"
           >
             <span className="text-xl">🔒</span>
-            <span className="text-xs text-gray-400 font-semibold">Hold</span>
+            <span className="text-xs text-gray-400 font-semibold">Press & Hold to Access Settings</span>
           </button>
         </div>
 
@@ -610,7 +660,7 @@ export default function PecsBoard() {
 
           <div className="flex-1 overflow-y-auto px-4 pb-4">
             {/* Card Library */}
-            <div className="mt-4 mb-2">
+            <div id="tour-parent-card-library" className="mt-4 mb-2">
               <h2 className="font-extrabold text-gray-800 text-base mb-3">Card Library</h2>
               <div className="relative mb-3">
                 <input
@@ -658,7 +708,7 @@ export default function PecsBoard() {
             </div>
 
             {/* Live Board Preview */}
-            <div className="mt-5">
+            <div id="tour-parent-board-preview" className="mt-5">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-extrabold text-gray-800 text-base">Live Board Preview</h2>
                 <button
@@ -699,6 +749,7 @@ export default function PecsBoard() {
 
             {/* Save & Go to Child Mode */}
             <button
+              id="tour-parent-save-btn"
               onClick={() => { setMode("child"); }}
               className="mt-5 w-full py-4 rounded-2xl bg-blue-500 text-white font-extrabold text-base flex items-center justify-center gap-2 active:bg-blue-600 shadow-md"
             >
@@ -919,24 +970,41 @@ export default function PecsBoard() {
             >
               ←
             </button>
-            <h1 className="flex-1 font-extrabold text-gray-800 text-lg text-center">Voice Settings</h1>
+            <h1 className="flex-1 font-extrabold text-gray-800 text-lg text-center">Settings</h1>
             <div className="w-9" />
           </div>
 
           <div className="flex-1 overflow-y-auto pb-6">
             {/* TTS Section */}
-            <div className="mx-4 mt-4 rounded-2xl overflow-hidden shadow-sm">
+            <div id="tour-settings-tts" className="mx-4 mt-4 rounded-2xl overflow-hidden shadow-sm">
               <div className="px-4 py-2.5 font-extrabold text-sm tracking-wide" style={{ backgroundColor: "#FFB3B3", color: "#7F1D1D" }}>
                 TEXT-TO-SPEECH
               </div>
               <div className="bg-white px-4 py-4 flex flex-col gap-4">
-                <div className="flex items-center justify-between">
+                <div id="tour-settings-tts-toggle" className="flex items-center justify-between">
                   <span className="font-semibold text-gray-700">Enable Text-to-Speech</span>
                   <button
                     onClick={() => setTtsEnabled((v) => !v)}
                     className={`relative w-12 h-7 rounded-full transition-colors duration-200 ${ttsEnabled ? "bg-green-500" : "bg-gray-200"}`}
                   >
                     <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-200 ${ttsEnabled ? "left-6" : "left-1"}`} />
+                  </button>
+                </div>
+
+                <div id="tour-settings-auto-sentence" className="flex items-center justify-between">
+                  <div>
+                    <span className="font-semibold text-gray-700">Auto-Sentence</span>
+                    <p className="text-xs text-gray-400">After the first card, speak the full sentence on each tap</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = !autoSentence;
+                      setAutoSentence(next);
+                      localStorage.setItem("pecs:auto-sentence", String(next));
+                    }}
+                    className={`relative w-12 h-7 rounded-full transition-colors duration-200 ${autoSentence ? "bg-green-500" : "bg-gray-200"}`}
+                  >
+                    <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-200 ${autoSentence ? "left-6" : "left-1"}`} />
                   </button>
                 </div>
 
@@ -960,8 +1028,49 @@ export default function PecsBoard() {
               </div>
             </div>
 
+            {/* Card Categories Section */}
+            <div id="tour-settings-categories" className="mx-4 mt-4 rounded-2xl overflow-hidden shadow-sm">
+              <div className="px-4 py-2.5 font-extrabold text-sm tracking-wide" style={{ backgroundColor: "#B3D4FF", color: "#1E3A5F" }}>
+                CARD CATEGORIES
+              </div>
+              <div className="bg-white px-4 py-4 flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-semibold text-gray-700">Show ABCs Cards</span>
+                    <p className="text-xs text-gray-400">Display alphabet letter cards on the board</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = !showABCs;
+                      setShowABCs(next);
+                      localStorage.setItem("pecs:show-abcs", String(next));
+                    }}
+                    className={`relative w-12 h-7 rounded-full transition-colors duration-200 ${showABCs ? "bg-green-500" : "bg-gray-200"}`}
+                  >
+                    <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-200 ${showABCs ? "left-6" : "left-1"}`} />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-semibold text-gray-700">Show Numbers Cards</span>
+                    <p className="text-xs text-gray-400">Display number cards on the board</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = !showNumbers;
+                      setShowNumbers(next);
+                      localStorage.setItem("pecs:show-numbers", String(next));
+                    }}
+                    className={`relative w-12 h-7 rounded-full transition-colors duration-200 ${showNumbers ? "bg-green-500" : "bg-gray-200"}`}
+                  >
+                    <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-200 ${showNumbers ? "left-6" : "left-1"}`} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Switch to child mode */}
-            <div className="mx-4 mt-4">
+            <div id="tour-settings-child-mode" className="mx-4 mt-4">
               <button
                 onClick={() => setMode("child")}
                 className="w-full py-4 rounded-2xl bg-blue-500 text-white font-extrabold text-base active:bg-blue-600 shadow-md"
@@ -974,15 +1083,16 @@ export default function PecsBoard() {
       )}
 
       {/* ── BOTTOM NAVIGATION ── */}
-      <nav className="flex-none flex items-stretch bg-white border-t border-gray-100">
+      <nav id="tour-parent-nav" className="flex-none flex items-stretch bg-white border-t border-gray-100">
         {[
-          { id: "dashboard" as ParentTab, icon: "🏠", label: "Home" },
-          { id: "preselected" as ParentTab, icon: "⭐", label: "Preselected" },
-          { id: "library" as ParentTab, icon: "📚", label: "Library" },
-          { id: "settings" as ParentTab, icon: "⚙️", label: "Settings" },
+          { id: "dashboard" as ParentTab, icon: "🏠", label: "Home", tourId: "tour-nav-home" },
+          { id: "preselected" as ParentTab, icon: "⭐", label: "Preselected", tourId: "tour-nav-preselected" },
+          { id: "library" as ParentTab, icon: "📚", label: "Library", tourId: "tour-nav-library" },
+          { id: "settings" as ParentTab, icon: "⚙️", label: "Settings", tourId: "tour-nav-settings" },
         ].map((tab) => (
           <button
             key={tab.id}
+            id={tab.tourId}
             onClick={() => setParentTab(tab.id)}
             className={`flex-1 flex flex-col items-center py-2.5 gap-0.5 transition-colors active:bg-gray-50 ${parentTab === tab.id ? "text-blue-500" : "text-gray-400"}`}
           >
@@ -1085,9 +1195,9 @@ export default function PecsBoard() {
                           />
                         </div>
                         {/* Record Audio button */}
-                        <button className="w-full py-3 rounded-2xl border-2 border-gray-200 text-gray-600 font-bold text-sm flex items-center justify-center gap-2">
+                        {/* <button className="w-full py-3 rounded-2xl border-2 border-gray-200 text-gray-600 font-bold text-sm flex items-center justify-center gap-2">
                           🎙 Record Audio
-                        </button>
+                        </button> */}
                       </>
                     )}
 
@@ -1099,8 +1209,18 @@ export default function PecsBoard() {
                         onChange={(e) => setNewCategory(e.target.value)}
                         className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-base outline-none focus:border-blue-400"
                       >
-                        {["Food", "Toys", "Actions", "Feelings", "People", "Objects", "Places", "Custom"].map((c) => (
-                          <option key={c}>{c}</option>
+                        {[
+                          { value: "Food", label: "Food" },
+                          { value: "Toys", label: "Toys" },
+                          { value: "Actions", label: "Actions" },
+                          { value: "Feelings", label: "Feelings" },
+                          { value: "People", label: "People" },
+                          { value: "Objects", label: "Objects" },
+                          { value: "Places", label: "Places" },
+                          { value: "Custom", label: "Custom" },
+                          { value: "Starters", label: "⚡ Starters — appears in Action Words row" },
+                        ].map(({ value, label }) => (
+                          <option key={value} value={value}>{label}</option>
                         ))}
                       </select>
                     </div>
