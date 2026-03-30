@@ -7,6 +7,23 @@
 
 body {
   font-family: "Nunito", sans-serif;
-  background: #f0f7ff;
+  background: #F0F7FF;
   color: #2c3e50;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+input, textarea, select {
+  user-select: text;
+}
+
+/* Safe area padding for devices with home indicator */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Prevent overscroll bounce on iOS */
+html, body {
+  overscroll-behavior: none;
+  height: 100%;
 }

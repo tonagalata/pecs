@@ -52,6 +52,15 @@ export async function initDb() {
   if (count === 0) {
     // [label, category, arasaac_pictogram_id]
     const defaults: [string, string, number][] = [
+      // Starters (PECS action phrases)
+      ["I want",   "Starters", 7650],
+      ["I need",   "Starters", 5023],
+      ["more",     "Starters", 3833],
+      ["help",     "Starters", 4997],
+      ["stop",     "Starters", 5466],
+      ["yes",      "Starters", 5827],
+      ["no",       "Starters", 5464],
+      ["finished", "Starters", 3766],
       ["apple",    "Food",     2462],
       ["drink",    "Food",     6061],
       ["cookie",   "Food",     8312],
@@ -146,6 +155,22 @@ export async function initDb() {
       for (const [label, pictogram_id] of numberSeeds) {
         await db.execute({
           sql: "INSERT INTO cards (emoji, pictogram_id, label, category, status, preselected, sort_order) VALUES ('', ?, ?, 'Numbers', 'active', 0, ?)",
+          args: [pictogram_id, label, order++],
+        });
+      }
+    }
+
+    const { rows: starterRows } = await db.execute("SELECT COUNT(*) as count FROM cards WHERE category = 'Starters'");
+    if (Number((starterRows[0] as unknown as { count: number }).count) === 0) {
+      const starterSeeds: [string, number][] = [
+        ["I want", 7650], ["I need", 5023], ["more", 3833], ["help", 4997],
+        ["stop", 5466], ["yes", 5827], ["no", 5464], ["finished", 3766],
+      ];
+      // Insert starters at sort_order -8..-1 so they always appear first
+      let order = -8;
+      for (const [label, pictogram_id] of starterSeeds) {
+        await db.execute({
+          sql: "INSERT INTO cards (emoji, pictogram_id, label, category, status, preselected, sort_order) VALUES ('', ?, ?, 'Starters', 'active', 0, ?)",
           args: [pictogram_id, label, order++],
         });
       }

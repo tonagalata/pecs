@@ -1,34 +1,10 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { getCachedUrl, setCachedUrl } from "@/lib/tts-cache";
 
-// Module-level in-memory cache shared across all hook instances
+// Module-level in-memory cache shared across all hook instances (fastest layer)
 const memCache = new Map<string, string>();
-const LS_PREFIX = "tts:";
-
-function readCache(phrase: string): string | null {
-  const hit = memCache.get(phrase);
-  if (hit) return hit;
-  try {
-    const stored = localStorage.getItem(LS_PREFIX + phrase);
-    if (stored) {
-      memCache.set(phrase, stored);
-      return stored;
-    }
-  } catch {
-    // localStorage unavailable (private browsing, permissions, etc.)
-  }
-  return null;
-}
-
-function writeCache(phrase: string, url: string): void {
-  memCache.set(phrase, url);
-  try {
-    localStorage.setItem(LS_PREFIX + phrase, url);
-  } catch {
-    // ignore write failures
-  }
-}
 
 const PREFERRED_VOICES = [
   "Samantha", "Karen", "Moira", "Fiona",
@@ -60,7 +36,6 @@ export function useTTS(voiceId?: string): UseTTSResult {
   const [isLoading, setIsLoading] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  // Keep voiceId accessible inside callbacks without causing re-renders
   const voiceIdRef = useRef(voiceId);
   voiceIdRef.current = voiceId;
 
@@ -108,14 +83,26 @@ export function useTTS(voiceId?: string): UseTTSResult {
         audio.play().catch(() => playBrowser(phrase));
       };
 
-      // 1. In-memory cache (fastest)
-      const memHit = readCache(phrase);
+      // 1. In-memory cache (synchronous, fastest)
+      const memHit = memCache.get(phrase);
       if (memHit) {
         launchAudio(memHit);
         return;
       }
 
-      // 2. API (Turso cache or Resemble generation)
+      // 2. IndexedDB cache (async, avoids network)
+      try {
+        const idbHit = await getCachedUrl(phrase);
+        if (idbHit) {
+          memCache.set(phrase, idbHit);
+          launchAudio(idbHit);
+          return;
+        }
+      } catch {
+        // IDB unavailable — fall through to API
+      }
+
+      // 3. API (Turso server cache or Resemble generation)
       setIsLoading(true);
       try {
         const res = await fetch("/api/tts", {
@@ -127,9 +114,11 @@ export function useTTS(voiceId?: string): UseTTSResult {
         if (res.ok) {
           const json = await res.json();
           if (json.url) {
-            writeCache(phrase, json.url as string);
+            const url = json.url as string;
+            memCache.set(phrase, url);
+            setCachedUrl(phrase, url).catch(() => {});
             setIsLoading(false);
-            launchAudio(json.url as string);
+            launchAudio(url);
             return;
           }
         }
@@ -138,7 +127,7 @@ export function useTTS(voiceId?: string): UseTTSResult {
       }
 
       setIsLoading(false);
-      // 3. Browser speech fallback
+      // 4. Browser speech fallback
       playBrowser(phrase);
     },
     [isPlaying, isLoading, stop, playBrowser]
