@@ -93,7 +93,7 @@ export function useTour(mode: string, parentTab?: string) {
       ];
 
       const steps = candidates.filter(
-        (step) => !step.element || el(step.element.replace("#", "")) !== null
+        (step) => !step.element || el((step.element as string).replace("#", "")) !== null
       );
 
       const driverObj = driver({
@@ -205,7 +205,7 @@ export function useTour(mode: string, parentTab?: string) {
       ];
 
       const steps = candidates.filter(
-        (step) => !step.element || el(step.element.replace("#", "")) !== null
+        (step) => !step.element || el((step.element as string).replace("#", "")) !== null
       );
 
       const driverObj = driver({
