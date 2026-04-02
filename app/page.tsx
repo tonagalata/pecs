@@ -42,8 +42,8 @@ const FEATURES = [
   },
   {
     icon: "✨",
-    title: "Auto Sentence Builder",
-    desc: "Tap symbols and watch full sentences form automatically, ready to speak aloud.",
+    title: "Auto Sentence Speak",
+    desc: "Tap multiple symbols and it automatically speak the sentence for you.",
     color: "#DCFCE7",
     accent: "#22C55E",
   },

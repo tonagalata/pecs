@@ -10,7 +10,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
     const fields: string[] = [];
-    const args: (string | number)[] = [];
+    const args: (string | number | null)[] = [];
 
     if (body.label !== undefined) {
       fields.push("label = ?");
