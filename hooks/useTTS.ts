@@ -2,6 +2,16 @@
 
 import { useState, useRef, useCallback } from "react";
 import { getCachedUrl, setCachedUrl } from "@/lib/tts-cache";
+import { getCustomRecording } from "@/lib/audio-recordings";
+
+// Normalize single letters/numbers so TTS speaks them clearly:
+// "P" → "the letter P",  "7" → "the number 7"
+function normalizePhraseForSpeech(phrase: string): string {
+  const t = phrase.trim();
+  if (/^[A-Za-z]$/.test(t)) return `the letter ${t.toUpperCase()}`;
+  if (/^\d{1,2}$/.test(t)) return `the number ${t}`;
+  return phrase;
+}
 
 // Module-level in-memory cache shared across all hook instances (fastest layer)
 const memCache = new Map<string, string>();
@@ -85,33 +95,34 @@ export function useTTS(voiceId?: string): UseTTSResult {
 
   const playPhrase = useCallback(async (phrase: string) => {
     busyRef.current = true;
+    const spokenPhrase = normalizePhraseForSpeech(phrase);
 
-    const launchAudio = (url: string) => {
+    const launchAudio = (url: string, owned = false) => {
       if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
       const audio = new Audio(url);
       audioRef.current = audio;
       setIsPlaying(true);
       setIsLoading(false);
-      audio.onended = () => { audioRef.current = null; playNext(); };
-      audio.onerror = () => { audioRef.current = null; playBrowser(phrase, playNext); };
-      audio.play().catch(() => playBrowser(phrase, playNext));
+      audio.onended = () => { if (owned) URL.revokeObjectURL(url); audioRef.current = null; playNext(); };
+      audio.onerror = () => { if (owned) URL.revokeObjectURL(url); audioRef.current = null; playBrowser(spokenPhrase, playNext); };
+      audio.play().catch(() => { if (owned) URL.revokeObjectURL(url); playBrowser(spokenPhrase, playNext); });
     };
 
-    // 1. In-memory cache (synchronous, fastest — device)
-    const memHit = memCache.get(phrase);
+    // 0. Custom device recording (keyed by original label — never leaves this device)
+    try {
+      const customBlob = await getCustomRecording(phrase);
+      if (customBlob) { launchAudio(URL.createObjectURL(customBlob), true); return; }
+    } catch { /* ignore */ }
+
+    // 1. In-memory cache (synchronous, fastest)
+    const memHit = memCache.get(spokenPhrase);
     if (memHit) { launchAudio(memHit); return; }
 
-    // 2. IndexedDB cache (async, device storage — avoids network)
+    // 2. IndexedDB cache (device storage — avoids network)
     try {
-      const idbHit = await getCachedUrl(phrase);
-      if (idbHit) {
-        memCache.set(phrase, idbHit);
-        launchAudio(idbHit);
-        return;
-      }
-    } catch {
-      // IDB unavailable — fall through to API
-    }
+      const idbHit = await getCachedUrl(spokenPhrase);
+      if (idbHit) { memCache.set(spokenPhrase, idbHit); launchAudio(idbHit); return; }
+    } catch { /* IDB unavailable */ }
 
     // 3. API (Turso server cache or Resemble generation)
     setIsLoading(true);
@@ -119,26 +130,23 @@ export function useTTS(voiceId?: string): UseTTSResult {
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phrase, voiceId: voiceIdRef.current }),
+        body: JSON.stringify({ phrase: spokenPhrase, voiceId: voiceIdRef.current }),
       });
-
       if (res.ok) {
         const json = await res.json();
         if (json.url) {
           const url = json.url as string;
-          memCache.set(phrase, url);
-          setCachedUrl(phrase, url).catch(() => {});
+          memCache.set(spokenPhrase, url);
+          setCachedUrl(spokenPhrase, url).catch(() => {});
           launchAudio(url);
           return;
         }
       }
-    } catch {
-      // network failure or API error
-    }
+    } catch { /* network failure */ }
 
     setIsLoading(false);
     // 4. Browser speech fallback
-    playBrowser(phrase, playNext);
+    playBrowser(spokenPhrase, playNext);
   }, [playBrowser, playNext]);
 
   // Keep ref current so onended callbacks always call the latest version

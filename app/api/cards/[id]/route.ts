@@ -18,7 +18,15 @@ export async function PATCH(
     }
     if (body.pictogram_id !== undefined) {
       fields.push("pictogram_id = ?");
-      args.push(Number(body.pictogram_id));
+      args.push(body.pictogram_id === null ? null : Number(body.pictogram_id));
+    }
+    if (body.emoji !== undefined) {
+      fields.push("emoji = ?");
+      args.push(String(body.emoji));
+    }
+    if (body.category !== undefined) {
+      fields.push("category = ?");
+      args.push(String(body.category));
     }
     if (body.status !== undefined) {
       fields.push("status = ?");

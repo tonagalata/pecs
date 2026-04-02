@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "PECS Board",
-    short_name: "PECS",
-    description: "Picture Exchange Communication System for children with autism",
+    name: "PictoTalk",
+    short_name: "PictoTalk",
+    description: "Free picture communication board powered by ARASAAC pictograms.",
     start_url: "/",
     display: "standalone",
     orientation: "any",

@@ -41,11 +41,41 @@ export function useTour(mode: string, parentTab?: string) {
           },
         },
         {
+          element: "#tour-preselected-badge",
+          popover: {
+            title: "⭐ Favourite Cards",
+            description:
+              "Parents can mark favourite cards. Tap here to show only those cards, great for a focused board! It says 'Preselected On' when active.",
+            side: "bottom",
+            align: "start",
+          },
+        },
+        {
+          element: "#tour-sentence-badge",
+          popover: {
+            title: "💬 Auto Sentence",
+            description:
+              "Turn this on to hear the whole message read aloud each time you add a card. It says 'Auto Sentence On' when active, no need to tap Speak!",
+            side: "bottom",
+            align: "end",
+          },
+        },
+        {
           element: "#tour-starter-cards",
           popover: {
             title: "⚡ Action Words",
             description:
-              'Tap these quick-start phrases to begin a message fast — like "I want" or "I need"!',
+              'Tap these quick-start phrases to begin a message fast, like "I want" or "I need"!',
+            side: "bottom",
+            align: "start",
+          },
+        },
+        {
+          element: "#tour-category-filter",
+          popover: {
+            title: "🗂️ Category Filter",
+            description:
+              "Tap a category circle to show only cards from that group, Food, Actions, People and more. Tap it again to see all cards.",
             side: "bottom",
             align: "start",
           },
@@ -61,33 +91,13 @@ export function useTour(mode: string, parentTab?: string) {
           },
         },
         {
-          element: "#tour-preselected-badge",
-          popover: {
-            title: "⭐ Favourite Cards",
-            description:
-              "Parents can mark favourite cards. Tap this to show only those cards — great for a focused board!",
-            side: "top",
-            align: "start",
-          },
-        },
-        {
-          element: "#tour-sentence-badge",
-          popover: {
-            title: "💬 Auto-Sentence",
-            description:
-              "Turn this on to hear the whole message read aloud each time a new card is added — no need to tap Speak!",
-            side: "top",
-            align: "start",
-          },
-        },
-        {
           element: "#tour-lock-btn",
           popover: {
             title: "🔒 Parent Setup",
             description:
-              "Parents: hold this button for a moment to open Parent Setup — add picture cards, pick favourites, and adjust voice settings.",
+              "Parents: hold this button for a moment to open Parent Setup, add picture cards, pick favourites, and adjust voice settings.",
             side: "top",
-            align: "end",
+            align: "center",
           },
         },
       ];
@@ -139,7 +149,7 @@ export function useTour(mode: string, parentTab?: string) {
           popover: {
             title: "👩‍👧 Welcome to Parent Setup!",
             description:
-              "This is where you manage your child's PECS board — add cards, pick favourites, and configure the voice. Let's take a look!",
+              "This is where you manage your child's PECS board, add cards, pick favourites, and configure the voice. Let's take a look!",
           },
         },
         {
@@ -187,7 +197,7 @@ export function useTour(mode: string, parentTab?: string) {
           popover: {
             title: "📚 Library Tab",
             description:
-              "Create and manage custom cards here — search the pictogram library, take a photo, or add Action Words that appear in the top row.",
+              "Create and manage custom cards here, earch the pictogram library, take a photo, or add Action Words that appear in the top row.",
             side: "top",
             align: "center",
           },
