@@ -106,6 +106,7 @@ function PictoTile({
       onFocus={() => setActive(true)}
       onBlur={() => setActive(false)}
       disabled={loading}
+      className="picto-tile"
       style={{
         background: color,
         border: `2px solid ${border}`,
@@ -121,7 +122,7 @@ function PictoTile({
         transition: "all 0.2s cubic-bezier(0.34,1.56,0.64,1)",
         animationDelay: `${delay}ms`,
         outline: "none",
-        minWidth: 80,
+        width: "100%",
         position: "relative",
         opacity: loading ? 0.75 : 1,
       }}
@@ -312,21 +313,41 @@ export default function Home() {
           border-radius: 100px;
           border: 1.5px solid #FDE68A;
         }
+
+        /* ── Mobile ── */
+        @media (max-width: 640px) {
+          .nav-links { display: none !important; }
+          .hero-float { display: none !important; }
+          .cta-btn { font-size: 15px !important; padding: 14px 24px !important; }
+          .cta-secondary { font-size: 14px !important; padding: 13px 22px !important; }
+          .demo-section { padding-top: 60px !important; padding-bottom: 60px !important; }
+          .features-section { padding-top: 60px !important; padding-bottom: 60px !important; }
+          .mission-section { padding-top: 60px !important; padding-bottom: 60px !important; }
+          .cta-section { padding-top: 60px !important; padding-bottom: 60px !important; }
+          .tile-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)) !important; gap: 10px !important; }
+          .picto-tile { padding: 10px 6px 8px !important; border-radius: 14px !important; }
+          .picto-tile span:first-of-type { font-size: 28px !important; }
+          .sentence-row { flex-direction: column !important; align-items: stretch !important; gap: 10px !important; }
+          .sentence-actions { margin-left: 0 !important; width: 100% !important; justify-content: flex-end !important; }
+          .footer-inner { flex-direction: column !important; align-items: center !important; text-align: center !important; }
+          .hero-stats { margin-top: 48px !important; gap: 24px !important; }
+          .features-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
 
       {/* ── NAV ── */}
-      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(255,251,247,0.88)", backdropFilter: "blur(16px)", borderBottom: "1px solid #F5EDE0", padding: "20px clamp(20px,5vw,80px)", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(255,251,247,0.88)", backdropFilter: "blur(16px)", borderBottom: "1px solid #F5EDE0", padding: "0 clamp(20px,5vw,80px)", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <img src="/pecs-logo.svg" alt="PictoTalk" style={{ width: 32, height: 32, objectFit: "contain" }} />
           <span style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 22, color: "#1C1917", letterSpacing: -0.5 }}>PictoTalk</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
+        <div className="nav-links" style={{ display: "flex", alignItems: "center", gap: 28 }}>
           <a href="#features" className="nav-link">Features</a>
           <a href="#demo" className="nav-link">Try it</a>
-          <a href="/app" style={{ background: "#1C1917", color: "white", fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 14, padding: "9px 22px", borderRadius: 100, textDecoration: "none", transition: "background 0.2s" }}>
-            Get Started →
-          </a>
         </div>
+        <a href="/app" style={{ background: "#1C1917", color: "white", fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 14, padding: "9px 22px", borderRadius: 100, textDecoration: "none", transition: "background 0.2s", whiteSpace: "nowrap" }}>
+          Get Started →
+        </a>
       </nav>
 
       {/* ── HERO ── */}
@@ -334,10 +355,10 @@ export default function Home() {
         <div style={{ position: "absolute", top: -120, right: -120, width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, #FED7AA 0%, transparent 70%)", opacity: 0.5, pointerEvents: "none" }} />
         <div style={{ position: "absolute", bottom: -80, left: -80, width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, #DDD6FE 0%, transparent 70%)", opacity: 0.45, pointerEvents: "none" }} />
 
-        <div className="float-a" style={{ position: "absolute", top: 120, left: "8%", background: "#FEE2E2", border: "2px solid #FECACA", borderRadius: 16, padding: "10px 14px", fontSize: 28, boxShadow: "0 4px 16px #FECACA44", pointerEvents: "none" }}>🍎</div>
-        <div className="float-b" style={{ position: "absolute", top: 180, right: "9%", background: "#DBEAFE", border: "2px solid #BFDBFE", borderRadius: 16, padding: "10px 14px", fontSize: 28, boxShadow: "0 4px 16px #BFDBFE44", pointerEvents: "none" }}>🏠</div>
-        <div className="float-a" style={{ position: "absolute", bottom: 180, left: "12%", background: "#DCFCE7", border: "2px solid #BBF7D0", borderRadius: 16, padding: "10px 14px", fontSize: 28, boxShadow: "0 4px 16px #BBF7D044", animationDelay: "1.2s", pointerEvents: "none" }}>⭐</div>
-        <div className="float-b" style={{ position: "absolute", bottom: 160, right: "11%", background: "#FCE7F3", border: "2px solid #FBCFE8", borderRadius: 16, padding: "10px 14px", fontSize: 28, boxShadow: "0 4px 16px #FBCFE844", animationDelay: "0.8s", pointerEvents: "none" }}>🎨</div>
+        <div className="float-a hero-float" style={{ position: "absolute", top: 120, left: "8%", background: "#FEE2E2", border: "2px solid #FECACA", borderRadius: 16, padding: "10px 14px", fontSize: 28, boxShadow: "0 4px 16px #FECACA44", pointerEvents: "none" }}>🍎</div>
+        <div className="float-b hero-float" style={{ position: "absolute", top: 180, right: "9%", background: "#DBEAFE", border: "2px solid #BFDBFE", borderRadius: 16, padding: "10px 14px", fontSize: 28, boxShadow: "0 4px 16px #BFDBFE44", pointerEvents: "none" }}>🏠</div>
+        <div className="float-a hero-float" style={{ position: "absolute", bottom: 180, left: "12%", background: "#DCFCE7", border: "2px solid #BBF7D0", borderRadius: 16, padding: "10px 14px", fontSize: 28, boxShadow: "0 4px 16px #BBF7D044", animationDelay: "1.2s", pointerEvents: "none" }}>⭐</div>
+        <div className="float-b hero-float" style={{ position: "absolute", bottom: 160, right: "11%", background: "#FCE7F3", border: "2px solid #FBCFE8", borderRadius: 16, padding: "10px 14px", fontSize: 28, boxShadow: "0 4px 16px #FBCFE844", animationDelay: "0.8s", pointerEvents: "none" }}>🎨</div>
 
         <div className="fade-up" style={{ marginBottom: 28 }}>
           <span className="badge"><span>✦</span>100% free · forever · no account needed</span>
@@ -353,12 +374,12 @@ export default function Home() {
 
         <div className="fade-up delay-3" style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center" }}>
           <a href="/app" className="cta-btn"><span>🚀</span>Get Started, it&apos;s free</a>
-          <a href="#demo" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "white", color: "#1C1917", fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 17, padding: "17px 36px", borderRadius: 100, border: "2px solid #E7DDD3", textDecoration: "none", transition: "border-color 0.2s, transform 0.2s" }}>
+          <a href="#demo" className="cta-secondary" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "white", color: "#1C1917", fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 17, padding: "17px 36px", borderRadius: 100, border: "2px solid #E7DDD3", textDecoration: "none", transition: "border-color 0.2s, transform 0.2s" }}>
             See how it works ↓
           </a>
         </div>
 
-        <div className="fade-up delay-5" style={{ display: "flex", gap: "clamp(24px,5vw,64px)", marginTop: 72, flexWrap: "wrap", justifyContent: "center" }}>
+        <div className="fade-up delay-5 hero-stats" style={{ display: "flex", gap: "clamp(24px,5vw,64px)", marginTop: 72, flexWrap: "wrap", justifyContent: "center" }}>
           {[
             { value: `${symbolCount.toLocaleString()}+`, label: "ARASAAC symbols" },
             { value: "100%", label: "Free forever" },
@@ -385,7 +406,7 @@ export default function Home() {
       </div>
 
       {/* ── DEMO ── */}
-      <section id="demo" style={{ padding: "100px clamp(20px,5vw,80px)", maxWidth: 1100, margin: "0 auto" }}>
+      <section id="demo" className="demo-section" style={{ padding: "100px clamp(20px,5vw,80px)", maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 56 }}>
           <span style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(34px,5vw,56px)", fontWeight: 600, letterSpacing: -1.5, lineHeight: 1.15 }}>Try it right here</span>
           <p style={{ color: "#78716C", fontSize: 17, marginTop: 14, maxWidth: 480, margin: "14px auto 0", lineHeight: 1.6 }}>Tap the symbols below to build a sentence, just like in the real app.</p>
@@ -395,19 +416,21 @@ export default function Home() {
           {sentenceBuilt.length === 0 ? (
             <span style={{ color: "#C4B5A8", fontSize: 16, fontStyle: "italic", fontFamily: "'Fraunces', serif" }}>Tap symbols below to build your sentence…</span>
           ) : (
-            <>
-              {sentenceBuilt.map((w, i) => (
-                <span key={i} style={{ background: "#FEF3C7", border: "1.5px solid #FDE68A", borderRadius: 12, padding: "8px 16px", fontSize: 20, fontWeight: 700, color: "#92400E" }}>{w}</span>
-              ))}
-              <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+            <div className="sentence-row" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", width: "100%" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, flex: 1 }}>
+                {sentenceBuilt.map((w, i) => (
+                  <span key={i} style={{ background: "#FEF3C7", border: "1.5px solid #FDE68A", borderRadius: 12, padding: "8px 16px", fontSize: 20, fontWeight: 700, color: "#92400E" }}>{w}</span>
+                ))}
+              </div>
+              <div className="sentence-actions" style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                 <button onClick={() => speak(sentenceBuilt.join(" "))} style={{ background: "#DCFCE7", border: "1.5px solid #86EFAC", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 700, color: "#15803D", cursor: "pointer", fontFamily: "'Nunito', sans-serif" }}>🔊 Speak</button>
                 <button onClick={() => { setSentenceBuilt([]); window.speechSynthesis?.cancel(); }} style={{ background: "#FEE2E2", border: "1.5px solid #FECACA", borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: 700, color: "#B91C1C", cursor: "pointer", fontFamily: "'Nunito', sans-serif" }}>Clear ✕</button>
               </div>
-            </>
+            </div>
           )}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))", gap: 16 }}>
+        <div className="tile-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))", gap: 16 }}>
           {TILES.map((tile, i) => (
             <div key={tile.label} onClick={() => speakingLabel === null && toggleTile(tile)}>
               <PictoTile {...tile} delay={i * 40} loading={speakingLabel === tile.label} />
@@ -421,7 +444,7 @@ export default function Home() {
       </section>
 
       {/* ── FEATURES ── */}
-      <section id="features" style={{ background: "#FFF8F2", borderTop: "1.5px solid #F5EDE0", borderBottom: "1.5px solid #F5EDE0", padding: "100px clamp(20px,5vw,80px)" }}>
+      <section id="features" className="features-section" style={{ background: "#FFF8F2", borderTop: "1.5px solid #F5EDE0", borderBottom: "1.5px solid #F5EDE0", padding: "100px clamp(20px,5vw,80px)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 60 }}>
             <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(32px,4.5vw,52px)", fontWeight: 600, letterSpacing: -1.5, lineHeight: 1.2, marginBottom: 14 }}>
@@ -429,7 +452,7 @@ export default function Home() {
             </h2>
             <p style={{ color: "#78716C", fontSize: 17, maxWidth: 460, margin: "0 auto", lineHeight: 1.6 }}>Thoughtfully designed for learners, caregivers, and educators, with more features on the way.</p>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>
+          <div className="features-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>
             {FEATURES.map((f) => (
               <div key={f.title} className="feature-card">
                 <div style={{ width: 52, height: 52, borderRadius: 16, background: f.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, marginBottom: 16, border: `1.5px solid ${f.accent}33` }}>{f.icon}</div>
@@ -442,16 +465,16 @@ export default function Home() {
       </section>
 
       {/* ── MISSION ── */}
-      <section style={{ padding: "100px clamp(20px,5vw,80px)", maxWidth: 760, margin: "0 auto", textAlign: "center" }}>
+      <section className="mission-section" style={{ padding: "100px clamp(20px,5vw,80px)", maxWidth: 760, margin: "0 auto", textAlign: "center" }}>
         <div style={{ fontSize: 48, marginBottom: 28, animation: "float 4s ease-in-out infinite", display: "inline-block" }}>💛</div>
         <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 300, fontStyle: "italic", fontSize: "clamp(26px,4vw,44px)", lineHeight: 1.35, letterSpacing: -1, color: "#1C1917", marginBottom: 24 }}>
-          &ldquo;There's nothing more frustrating than not being able to communicate.&rdquo;
+          &ldquo;There&apos;s nothing more frustrating than not being able to communicate.&rdquo;
         </h2>
         <p style={{ color: "#A8A29E", fontSize: 14, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Dr. Temple Grandin.</p>
       </section>
 
       {/* ── FINAL CTA ── */}
-      <section style={{ minHeight: "fit-content !important",background: "#1C1917", padding: "100px clamp(20px,5vw,80px)", textAlign: "center", position: "relative", overflow: "hidden" }}>
+      <section className="cta-section" style={{ background: "#1C1917", padding: "100px clamp(20px,5vw,80px)", textAlign: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -100, left: "50%", transform: "translateX(-50%)", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, #FB923C33 0%, transparent 70%)", pointerEvents: "none" }} />
         <div style={{ position: "relative", zIndex: 1 }}>
           <span style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: "#FB923C", textTransform: "uppercase", letterSpacing: 2, display: "block", marginBottom: 20 }}>✦ No signup · No payment · No limits</span>
@@ -464,20 +487,22 @@ export default function Home() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer style={{ background: "#141210", padding: "40px clamp(20px,5vw,80px)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: "white", display: "flex", alignItems: "center", justifyContent: "center", padding: 4 }}>
-            <img src="/pecs-logo.svg" alt="PictoTalk" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+      <footer style={{ background: "#141210", padding: "40px clamp(20px,5vw,80px)" }}>
+        <div className="footer-inner" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "white", display: "flex", alignItems: "center", justifyContent: "center", padding: 4 }}>
+              <img src="/pecs-logo.svg" alt="PictoTalk" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            </div>
+            <span style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 18, color: "white" }}>PictoTalk</span>
+            <span style={{ color: "#ffffff", fontSize: 14, marginLeft: 8 }}>pictotalk.org</span>
           </div>
-          <span style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 18, color: "white" }}>PictoTalk</span>
-          <span style={{ color: "#ffffff", fontSize: 14, marginLeft: 8 }}>pictotalk.org</span>
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+            {["About", "Privacy", "ARASAAC", "Contact"].map((l) => (
+              <a key={l} href="#" style={{ color: "#ffffff", fontSize: 14, fontWeight: 600, textDecoration: "none", transition: "color 0.15s" }}>{l}</a>
+            ))}
+          </div>
+          <p style={{ color: "#ffffff", fontSize: 13 }}>© {new Date().getFullYear()} PictoTalk · Free forever</p>
         </div>
-        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-          {["About", "Privacy", "ARASAAC", "Contact"].map((l) => (
-            <a key={l} href="#" style={{ color: "#ffffff", fontSize: 14, fontWeight: 600, textDecoration: "none", transition: "color 0.15s" }}>{l}</a>
-          ))}
-        </div>
-        <p style={{ color: "#ffffff", fontSize: 13 }}>© {new Date().getFullYear()} PictoTalk · Free forever</p>
       </footer>
     </>
   );
