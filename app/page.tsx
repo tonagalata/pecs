@@ -323,7 +323,7 @@ export default function Home() {
           .demo-section { padding-top: 60px !important; padding-bottom: 60px !important; }
           .features-section { padding-top: 60px !important; padding-bottom: 60px !important; }
           .mission-section { padding-top: 60px !important; padding-bottom: 60px !important; }
-          .cta-section { padding-top: 60px !important; padding-bottom: 60px !important; }
+          .cta-section { padding-top: 60px !important; padding-bottom: 60px !important; min-height: fit-content !important; }
           .tile-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)) !important; gap: 10px !important; }
           .picto-tile { padding: 10px 6px 8px !important; border-radius: 14px !important; }
           .picto-tile span:first-of-type { font-size: 28px !important; }
@@ -336,7 +336,7 @@ export default function Home() {
       `}</style>
 
       {/* ── NAV ── */}
-      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(255,251,247,0.88)", backdropFilter: "blur(16px)", borderBottom: "1px solid #F5EDE0", padding: "0 clamp(20px,5vw,80px)", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <nav style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(255,251,247,0.88)", backdropFilter: "blur(16px)", borderBottom: "1px solid #F5EDE0", padding: "20px clamp(20px,5vw,80px)", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <img src="/pecs-logo.svg" alt="PictoTalk" style={{ width: 32, height: 32, objectFit: "contain" }} />
           <span style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 22, color: "#1C1917", letterSpacing: -0.5 }}>PictoTalk</span>
@@ -474,7 +474,7 @@ export default function Home() {
       </section>
 
       {/* ── FINAL CTA ── */}
-      <section className="cta-section" style={{ background: "#1C1917", padding: "100px clamp(20px,5vw,80px)", textAlign: "center", position: "relative", overflow: "hidden" }}>
+      <section className="cta-section" style={{ background: "#1C1917", padding: "100px clamp(20px,5vw,80px)", textAlign: "center", position: "relative", overflow: "hidden", minHeight: "fit-content" }}>
         <div style={{ position: "absolute", top: -100, left: "50%", transform: "translateX(-50%)", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, #FB923C33 0%, transparent 70%)", pointerEvents: "none" }} />
         <div style={{ position: "relative", zIndex: 1 }}>
           <span style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: "#FB923C", textTransform: "uppercase", letterSpacing: 2, display: "block", marginBottom: 20 }}>✦ No signup · No payment · No limits</span>
@@ -497,8 +497,13 @@ export default function Home() {
             <span style={{ color: "#ffffff", fontSize: 14, marginLeft: 8 }}>pictotalk.org</span>
           </div>
           <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-            {["About", "Privacy", "ARASAAC", "Contact"].map((l) => (
-              <a key={l} href="#" style={{ color: "#ffffff", fontSize: 14, fontWeight: 600, textDecoration: "none", transition: "color 0.15s" }}>{l}</a>
+            {[
+              { label: "About", href: "#" },
+              { label: "Privacy", href: "/privacy" },
+              { label: "ARASAAC", href: "https://arasaac.org" },
+              { label: "Contact", href: "/contact" },
+            ].map((l) => (
+              <a key={l.label} href={l.href} style={{ color: "#ffffff", fontSize: 14, fontWeight: 600, textDecoration: "none", transition: "color 0.15s" }}>{l.label}</a>
             ))}
           </div>
           <p style={{ color: "#ffffff", fontSize: 13 }}>© {new Date().getFullYear()} PictoTalk · Free forever</p>
