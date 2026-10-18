@@ -1,0 +1,20 @@
+**/node_modules
+.git
+.sst
+.claude
+**/.env
+**/.env.*
+**/.DS_Store
+
+apps/web/.next
+apps/web/out
+apps/mobile/.expo
+apps/mobile/dist
+apps/mobile/ios
+apps/mobile/android
+scripts/voice-pack/out
+server/public
+
+# v1 leftovers that may still exist locally
+/.next
+/modal

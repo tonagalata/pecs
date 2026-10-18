@@ -7,7 +7,9 @@ iPad/iPhone app + web app + landing site. No accounts, no data collection, works
 apps/mobile   Expo app: iOS, iPadOS, Android and the web version of the board
 apps/web      Landing site (Next.js static export)
 scripts/voice-pack   Generates the optional HD voice pack with Kokoro, locally, for free
-sst.config.ts AWS infrastructure (SST v4): S3 + CloudFront only
+server        Node server for Tona Deploy: serves the site, board and voice pack; Postgres migrations
+Dockerfile    Builds everything (including the voice pack) into one image for Tona Deploy
+sst.config.ts AWS infrastructure (SST v4): S3 + CloudFront only, the static alternative
 ```
 
 ## How speech works now (and why)
@@ -55,7 +57,35 @@ npm run dev:app      # Expo (press w for web, i for iOS simulator)
 npm run dev:web      # landing site on http://localhost:3000
 ```
 
-## Deploy to AWS (SST)
+## Deploy on Tona Deploy
+
+The root `Dockerfile` builds one container that serves everything. Each push to the app's
+branch is built and deployed automatically.
+
+| Path | What |
+| --- | --- |
+| `/` | Landing site (`apps/web` static export) |
+| `/app/` | Web version of the board (`apps/mobile` Expo web export, `baseUrl` `/app`) |
+| `/voice/kokoro-v1/` | HD voice pack, generated **during the Docker build** (Kokoro + ffmpeg, ~2.5 min) |
+| `/healthz` | Health check, `{"ok":true,"db":"up"}` |
+
+```bash
+tona create pictotalk --repo tonagalata/pecs --branch v2-on-device-voice \
+  --port 3000 --health /healthz --memory 256 --db
+tona deploys pictotalk
+tona domains add pictotalk pictotalk.org            # optional
+tona env set pictotalk CANONICAL_HOST=pictotalk.org # optional: redirect www etc.
+```
+
+- **Postgres:** `--db` gives the app its own database on the shared RDS instance and injects
+  `DATABASE_URL`. `server/` runs `server/migrations/*.sql` on start, before taking traffic.
+  Nothing is stored there yet (see [server/migrations/README.md](server/migrations/README.md)).
+- **Build-time settings:** `NEXT_PUBLIC_*` and `EXPO_PUBLIC_*` values are baked in at build, so
+  they are Docker build args (`CONTACT_EMAIL`, `APP_STORE_URL`, `VOICE`, `VOICE_PACK_VERSION`),
+  not Tona env vars.
+- **Local check:** `docker build -t pictotalk . && docker run -p 3000:3000 pictotalk`
+
+## Deploy to AWS (SST, static alternative)
 
 Prerequisites: AWS credentials (`aws configure` or SSO), optional Route 53 hosted zone.
 
@@ -81,6 +111,8 @@ to store yet. Add it when there's a feature that needs a server, such as opt-in 
 between a family's devices.
 
 ### Voice pack (optional, one-time)
+
+On Tona Deploy the Docker build runs this for you. For SST, run it locally and upload:
 
 ```bash
 brew install ffmpeg
