@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Btn, Row, Screen, Txt } from '@/components/ui';
 import { useMessage } from '@/lib/message';
+import { useLayout } from '@/lib/layout';
 import { speak } from '@/lib/speech';
 import { useProfile } from '@/lib/store';
 import { FONTS } from '@/lib/theme';
@@ -15,7 +16,7 @@ function Key({ label, onPress, flex = 1, alt, a11y }: { label: string; onPress: 
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={a11y ?? label} onPress={onPress}
       style={({ pressed }) => ({ flex, minWidth: 0, borderRadius: 14, borderWidth: 1, borderBottomWidth: 3, borderColor: palette.lineStrong, backgroundColor: pressed ? palette.accentSoft : alt ? palette.surfaceAlt : palette.surface, alignItems: 'center', justifyContent: 'center' })}>
-      <Text style={{ fontFamily: FONTS.bodyBold, fontSize: label.length > 1 ? 18 : 28, color: palette.ink }}>{label}</Text>
+      <Text style={{ fontFamily: FONTS.bodyBold, fontSize: label.length > 1 ? 16 : 26, color: palette.ink }}>{label}</Text>
     </Pressable>
   );
 }
@@ -23,6 +24,8 @@ function Key({ label, onPress, flex = 1, alt, a11y }: { label: string; onPress: 
 export default function Keyboard() {
   const { profile, palette, updateSettings } = useProfile();
   const msg = useMessage();
+  const L = useLayout();
+  const c = L.compact;
   const [text, setTextState] = useState(msg.text ? msg.text + ' ' : '');
   const set = (t: string) => { setTextState(t); msg.setText(t.trim()); };
   const abc = profile.settings.keyboardLayout === 'abc';
@@ -37,39 +40,39 @@ export default function Keyboard() {
 
 
   return (
-    <Screen>
+    <Screen style={{ padding: L.pad, gap: c ? 8 : 12 }}>
       <Row>
         <Btn icon="chevron-left" label="Pictures" onPress={() => router.back()} />
-        <Txt display size={22} style={{ flex: 1 }}>Type to speak</Txt>
+        <Txt display size={c ? 19 : 22} style={{ flex: 1 }} numberOfLines={1}>{c ? 'Type' : 'Type to speak'}</Txt>
         <Btn label={abc ? 'A to Z' : 'QWERTY'} onPress={() => updateSettings({ keyboardLayout: abc ? 'qwerty' : 'abc' })} accessibilityLabel="Change keyboard layout" />
       </Row>
-      <Row style={{ height: 140, alignItems: 'stretch' }}>
-        <View style={{ flex: 1, backgroundColor: palette.surface, borderWidth: 2, borderColor: palette.lineStrong, borderRadius: 20, padding: 18 }}>
-          <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 34, color: text ? palette.ink : palette.inkSoft }}>{text || 'Start typing…'}</Text>
+      <View style={{ height: c ? 172 : 140, flexDirection: c ? 'column' : 'row', gap: 10 }}>
+        <View style={{ flex: 1, backgroundColor: palette.surface, borderWidth: 2, borderColor: palette.lineStrong, borderRadius: 20, padding: c ? 12 : 18 }}>
+          <Text numberOfLines={c ? 3 : 2} style={{ fontFamily: FONTS.bodyBold, fontSize: c ? 22 : 34, color: text ? palette.ink : palette.inkSoft }}>{text || 'Start typing…'}</Text>
         </View>
-        <View style={{ width: 160, gap: 10 }}>
-          <Btn kind="primary" icon="volume-2" label="Speak" onPress={() => speak(text, profile.settings)} style={{ flex: 1 }} />
-          <Row gap={10}>
+        <View style={c ? { flexDirection: 'row', gap: 8, height: 56 } : { width: 160, gap: 10 }}>
+          <Btn kind="primary" icon="volume-2" label="Speak" onPress={() => speak(text, profile.settings)} style={{ flex: c ? 2 : 1 }} />
+          <Row gap={c ? 8 : 10} style={c ? { flex: 1 } : undefined}>
             <Btn icon="maximize" accessibilityLabel="Show full screen" onPress={() => router.push('/show')} style={{ flex: 1 }} />
             <Btn icon="x" accessibilityLabel="Clear" onPress={() => set('')} style={{ flex: 1 }} />
           </Row>
         </View>
+      </View>
+      <Row gap={c ? 5 : 8} style={{ height: c ? 48 : 60 }}>
+        {words.slice(0, c ? 4 : 5).map((w) => <Btn key={w} kind="soft" label={w} onPress={() => pick(w)} style={{ flex: 1, height: c ? 48 : 60, paddingHorizontal: 2 }} textStyle={{ fontSize: c ? 16 : 21 }} />)}
       </Row>
-      <Row gap={8} style={{ height: 60 }}>
-        {words.map((w) => <Btn key={w} kind="soft" label={w} onPress={() => pick(w)} style={{ flex: 1, height: 60 }} textStyle={{ fontSize: 21 }} />)}
-      </Row>
-      <View style={{ flex: 1, gap: 8 }}>
+      <View style={{ flex: 1, gap: c ? 6 : 8, maxHeight: c ? 300 : undefined }}>
         {rows.map((r, i) => (
-          <View key={r} style={{ flex: 1, flexDirection: 'row', gap: 8, paddingHorizontal: [0, 40, 120][i] }}>
+          <View key={r} style={{ flex: 1, flexDirection: 'row', gap: c ? 4 : 8, paddingHorizontal: (c ? [0, 16, 48] : [0, 40, 120])[i] }}>
             {r.split('').map((c) => <Key key={c} label={c} onPress={() => set(text + c)} />)}
           </View>
         ))}
-        <View style={{ flex: 1, flexDirection: 'row', gap: 8 }}>
+        <View style={{ flex: 1, flexDirection: 'row', gap: c ? 4 : 8 }}>
           <Key label="." alt onPress={() => set(text.replace(/\s+$/, '') + '. ')} a11y="period" />
           <Key label="?" alt onPress={() => set(text.replace(/\s+$/, '') + '? ')} a11y="question mark" />
           <Key label="space" flex={5} onPress={() => set(text + ' ')} />
           <Key label="⌫" alt flex={1.5} onPress={() => set(text.slice(0, -1))} a11y="Delete letter" />
-          <Key label="Delete word" alt flex={1.5} onPress={() => set(text.replace(/\s*\S+\s*$/, ' ').replace(/^\s+$/, ''))} />
+          <Key label={c ? 'word ⌫' : 'Delete word'} alt flex={1.5} onPress={() => set(text.replace(/\s*\S+\s*$/, ' ').replace(/^\s+$/, ''))} />
         </View>
       </View>
     </Screen>

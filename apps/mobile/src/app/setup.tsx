@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { SymbolImage } from '@/components/Tile';
 import { Btn, Card, Row, Screen, Txt } from '@/components/ui';
 import { listVoices, speak } from '@/lib/speech';
+import { useLayout } from '@/lib/layout';
 import { useApp } from '@/lib/store';
 import { FONTS } from '@/lib/theme';
 import type { Level, Settings } from '@/lib/types';
@@ -27,6 +28,7 @@ function Choice({ on, onPress, children }: { on: boolean; onPress: () => void; c
 
 export default function Setup() {
   const { palette, addProfile, state } = useApp();
+  const L = useLayout();
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [level, setLevel] = useState<Level>('young');
@@ -46,16 +48,16 @@ export default function Setup() {
 
   const shown = name.trim() || (level === 'adult' ? 'you' : 'them');
   return (
-    <Screen>
+    <Screen style={{ padding: L.pad }}>
       <Row style={{ justifyContent: 'space-between' }}>
-        <Txt display size={22}>Set up PictoTalk</Txt>
+        <Txt display size={L.compact ? 18 : 22}>{L.compact ? 'Set up' : 'Set up PictoTalk'}</Txt>
         <Row gap={8}>
           {['Who', 'Pressing', 'Voice'].map((l, i) => (
             <View key={l} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, backgroundColor: step === i + 1 ? palette.surface : 'transparent' }}>
               <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: step >= i + 1 ? palette.accent : palette.line, alignItems: 'center', justifyContent: 'center' }}>
                 <Txt bold size={14} color={step >= i + 1 ? palette.onAccent : palette.inkSoft}>{i + 1}</Txt>
               </View>
-              <Txt bold size={15}>{l}</Txt>
+              {!L.compact || step === i + 1 ? <Txt bold size={15}>{l}</Txt> : null}
             </View>
           ))}
         </Row>
@@ -65,7 +67,7 @@ export default function Setup() {
       <ScrollView contentContainerStyle={{ gap: 16, paddingBottom: 16 }} style={{ flex: 1 }}>
         {step === 1 ? (
           <>
-            <Txt display size={34} accessibilityRole="header">Who will be using PictoTalk?</Txt>
+            <Txt display size={L.compact ? 26 : 34} accessibilityRole="header">Who will be using PictoTalk?</Txt>
             <Txt soft size={18}>This sets a starting point. You can change everything later.</Txt>
             <View style={{ gap: 6, maxWidth: 520 }}>
               <Txt bold size={16}>Their first name (optional)</Txt>
@@ -88,7 +90,7 @@ export default function Setup() {
 
         {step === 2 ? (
           <>
-            <Txt display size={34} accessibilityRole="header">How does {shown} press buttons?</Txt>
+            <Txt display size={L.compact ? 26 : 34} accessibilityRole="header">How does {shown} press buttons?</Txt>
             <Txt soft size={18}>{"Pick what's easiest. If you're not sure, start with a normal tap."}</Txt>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
               {ACCESS.map((a) => (
@@ -104,7 +106,7 @@ export default function Setup() {
 
         {step === 3 ? (
           <>
-            <Txt display size={34} accessibilityRole="header">Choose a voice</Txt>
+            <Txt display size={L.compact ? 26 : 34} accessibilityRole="header">Choose a voice</Txt>
             <Txt soft size={18}>Voices come from this device, so they work without internet. Tap one to hear it.</Txt>
             <View style={{ gap: 10, maxWidth: 640 }}>
               <Choice on={!voice} onPress={() => { setVoice(undefined); speak('Hello, I am ready to talk.', { rate, hdVoice: false }); }}>

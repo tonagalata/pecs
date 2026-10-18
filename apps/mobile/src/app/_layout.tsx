@@ -8,6 +8,9 @@ import { AtkinsonHyperlegible_400Regular, AtkinsonHyperlegible_700Bold } from '@
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider, useApp } from '@/lib/store';
 import { MessageProvider } from '@/lib/message';
+import { setupWeb } from '@/lib/webSetup';
+
+setupWeb();
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 

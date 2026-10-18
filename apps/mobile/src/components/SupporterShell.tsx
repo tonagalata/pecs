@@ -40,14 +40,14 @@ export function SupporterShell({ children, title, actions }: { children: React.R
           {back}
         </View>
       ) : (
-        <View style={{ backgroundColor: palette.surface, borderBottomWidth: 1, borderBottomColor: palette.line, padding: 8, gap: 8 }}>
+        <View style={{ backgroundColor: palette.surface, borderBottomWidth: 1, borderBottomColor: palette.line, paddingVertical: 6, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Btn kind="primary" icon="chevron-left" accessibilityLabel="Back to the board" onPress={() => router.replace('/board')} style={{ minWidth: 48 }} />
           <ScrollView horizontal contentContainerStyle={{ gap: 4 }} showsHorizontalScrollIndicator={false}>{nav}</ScrollView>
-          {back}
         </View>
       )}
-      <View style={{ flex: 1, padding: 20, gap: 14 }}>
+      <View style={{ flex: 1, padding: side ? 20 : 12, gap: side ? 14 : 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <Txt display size={28} style={{ flex: 1 }} accessibilityRole="header">{title}</Txt>
+          <Txt display size={side ? 28 : 22} style={{ flex: 1, minWidth: 160 }} accessibilityRole="header">{title}</Txt>
           {actions}
         </View>
         {children}

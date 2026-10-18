@@ -9,6 +9,7 @@ import { BUILTIN } from '@/lib/builtin';
 import { choosePhoto, deletePhoto } from '@/lib/photos';
 import { deleteRecording, keepRecording } from '@/lib/recordings';
 import { speak } from '@/lib/speech';
+import { useLayout } from '@/lib/layout';
 import { useProfile } from '@/lib/store';
 import { searchArasaac } from '@/lib/symbols';
 import { FONTS, GROUP_COLORS, GROUP_ORDER, type Group } from '@/lib/theme';
@@ -25,6 +26,7 @@ function firstFreeCell(cells: Record<string, string>, cols: number, rows: number
 export default function WordScreen() {
   const params = useLocalSearchParams<{ id?: string; page?: string; cell?: string }>();
   const { profile, palette, updateProfile } = useProfile();
+  const L = useLayout();
   const existing = params.id ? profile.words[params.id] : undefined;
 
   const [label, setLabel] = useState(existing?.label ?? '');
@@ -107,8 +109,8 @@ export default function WordScreen() {
     <SupporterShell title={existing ? `Edit “${existing.label}”` : 'Add a word'} actions={
       <Row><Btn label="Cancel" onPress={() => router.back()} /><Btn kind="primary" label="Save word" disabled={!label.trim()} onPress={save} /></Row>
     }>
-      <View style={{ flex: 1, flexDirection: 'row', gap: 16, flexWrap: 'wrap' }}>
-        <Card style={{ flex: 1, minWidth: 340 }}>
+      <ScrollView style={{ flex: 1 }} scrollEnabled={L.compact} contentContainerStyle={{ flexGrow: 1, flexDirection: L.compact ? 'column' : 'row', gap: L.compact ? 12 : 16 }}>
+        <Card style={L.compact ? { minHeight: 420 } : { flex: 1, minWidth: 340 }}>
           <Segmented label="Picture source" value={tab} onChange={setTab} options={[{ value: 'symbols', label: 'Symbols' }, { value: 'photo', label: 'Photo' }]} />
           {tab === 'symbols' ? (
             <>
@@ -120,7 +122,7 @@ export default function WordScreen() {
                   return (
                     <Pressable key={h.key} accessibilityRole="button" accessibilityLabel={h.label} accessibilityState={{ selected: on }}
                       onPress={() => { setSymbol(h.symbol); if (!label.trim()) setLabel(h.label); }}
-                      style={{ width: 112, height: 120, borderRadius: 16, borderWidth: on ? 4 : 2, borderColor: on ? palette.accent : palette.line, backgroundColor: on ? palette.accentSoft : palette.surface, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                      style={{ width: L.compact ? 96 : 112, height: L.compact ? 104 : 120, borderRadius: 16, borderWidth: on ? 4 : 2, borderColor: on ? palette.accent : palette.line, backgroundColor: on ? palette.accentSoft : palette.surface, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                       <SymbolImage item={{ symbol: h.symbol }} size={66} />
                       <Txt bold size={13} numberOfLines={1}>{h.label}</Txt>
                     </Pressable>
@@ -142,7 +144,7 @@ export default function WordScreen() {
           )}
         </Card>
 
-        <ScrollView style={{ width: 380, flexGrow: 0 }} contentContainerStyle={{ gap: 14 }}>
+        <ScrollView style={L.compact ? { flexGrow: 0 } : { width: 380, flexGrow: 0 }} contentContainerStyle={{ gap: 14 }}>
           <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
             <View style={{ width: 130, height: 130, borderRadius: 20, borderWidth: 3, borderColor: g.edge, backgroundColor: g.fill, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
               <SymbolImage item={preview} size={76} />
@@ -200,7 +202,7 @@ export default function WordScreen() {
             }} />
           ) : null}
         </ScrollView>
-      </View>
+      </ScrollView>
     </SupporterShell>
   );
 }

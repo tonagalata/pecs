@@ -61,12 +61,16 @@ export interface TileProps {
   variant?: 'tinted' | 'bar';
   imageSize: number;
   fontSize?: number;
+  /** Width of the tile; used to size the label so words never break mid-word. */
+  cellWidth?: number;
+  /** Height of the tile; short tiles (landscape phones) put the picture beside the word. */
+  cellHeight?: number;
   hidden?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
 }
 
-export function Tile({ label, group, symbol, onSelect, variant = 'tinted', imageSize, fontSize = 20, hidden, style, accessibilityLabel }: TileProps) {
+export function Tile({ label, group, symbol, onSelect, variant = 'tinted', imageSize, fontSize = 20, cellWidth, cellHeight, hidden, style, accessibilityLabel }: TileProps) {
   const { palette, settings } = useApp();
   const [flash, setFlash] = useState(false);
   const handlers = useSelect(() => {
@@ -78,12 +82,17 @@ export function Tile({ label, group, symbol, onSelect, variant = 'tinted', image
   });
   const g = GROUP_COLORS[group];
   const tinted = variant === 'tinted' && palette.tintedTiles;
-  const fs = fontSize * TEXT_SCALE[settings.textSize];
+  const sideways = !!cellHeight && cellHeight < 76 && !!cellWidth && cellWidth > cellHeight * 1.4;
+  const img = sideways ? Math.min(imageSize, (cellHeight ?? 0) - 14) : imageSize;
+  const longest = Math.max(3, ...label.split(/\s+/).map((p) => p.length));
+  // Bold Atkinson averages ~0.6em per character; leave 12px of padding inside the tile.
+  const fit = cellWidth ? (cellWidth - 12 - (sideways ? img + 6 : 0)) / (longest * 0.6) : Infinity;
+  const fs = Math.max(9, Math.min(fontSize * TEXT_SCALE[settings.textSize], fit));
   const hasPicture = symbol.symbol.kind !== 'none' || !!symbol.fallback;
   const showImg = settings.textPos !== 'words' && hasPicture;
   const showText = settings.textPos !== 'pictures';
   const text = showText ? (
-    <Text numberOfLines={fs < 14 ? 1 : 2} adjustsFontSizeToFit ellipsizeMode="clip" style={{ fontFamily: FONTS.bodyBold, fontSize: showImg ? fs : fs * 1.25, color: palette.ink, textAlign: 'center', lineHeight: fs * 1.15 }}>{label}</Text>
+    <Text numberOfLines={label.includes(' ') ? 2 : 1} adjustsFontSizeToFit ellipsizeMode="clip" style={{ fontFamily: FONTS.bodyBold, fontSize: showImg ? fs : Math.min(fs * 1.25, fit), color: palette.ink, textAlign: 'center', lineHeight: fs * 1.15 }}>{label}</Text>
   ) : null;
   return (
     <Pressable
@@ -92,7 +101,8 @@ export function Tile({ label, group, symbol, onSelect, variant = 'tinted', image
       {...handlers}
       style={({ pressed }) => [
         {
-          flex: 1, flexBasis: 0, minWidth: 0, borderRadius: 18, alignItems: 'center', justifyContent: 'center', padding: 4, gap: 4, overflow: 'hidden',
+          flex: 1, flexBasis: 0, minWidth: 0, borderRadius: 18, alignItems: 'center', justifyContent: 'center', padding: 4, gap: sideways ? 6 : 4, overflow: 'hidden',
+          flexDirection: sideways ? 'row' : 'column',
           backgroundColor: hidden ? 'transparent' : tinted ? g.fill : palette.surface,
           borderWidth: hidden ? 2 : tinted ? 3 : 1, borderStyle: hidden ? 'dashed' : 'solid',
           borderColor: hidden ? palette.lineStrong : tinted ? g.edge : palette.line,
@@ -105,7 +115,7 @@ export function Tile({ label, group, symbol, onSelect, variant = 'tinted', image
       ]}
     >
       {settings.textPos === 'above' ? text : null}
-      {showImg ? <SymbolImage item={symbol} size={imageSize} /> : null}
+      {showImg ? <SymbolImage item={symbol} size={img} /> : null}
       {settings.textPos !== 'above' ? text : null}
     </Pressable>
   );

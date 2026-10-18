@@ -40,7 +40,7 @@ export default function Plan() {
           {items.map((it, i) => (
             <Row key={it.id} style={{ borderTopWidth: i ? 1 : 0, borderTopColor: palette.line, paddingTop: i ? 8 : 0 }}>
               <SymbolImage item={{ symbol: it.symbol, fallback: it.fallback, lookup: it.label.split(' ')[0] }} size={44} />
-              <TextInput value={it.time ?? ''} onChangeText={(v) => set((s) => s.map((x) => (x.id === it.id ? { ...x, time: v } : x)))} placeholder="time" placeholderTextColor={palette.inkSoft} accessibilityLabel={`Time for ${it.label}`} style={[input, { width: 90 }]} />
+              <TextInput value={it.time ?? ''} onChangeText={(v) => set((s) => s.map((x) => (x.id === it.id ? { ...x, time: v } : x)))} placeholder="time" placeholderTextColor={palette.inkSoft} accessibilityLabel={`Time for ${it.label}`} style={[input, { width: 72 }]} />
               <TextInput value={it.label} onChangeText={(v) => set((s) => s.map((x) => (x.id === it.id ? { ...x, label: v } : x)))} accessibilityLabel="Step name" style={[input, { flex: 1 }]} />
               <Btn icon="arrow-up" accessibilityLabel="Move up" onPress={() => move(i, -1)} />
               <Btn icon="arrow-down" accessibilityLabel="Move down" onPress={() => move(i, 1)} />

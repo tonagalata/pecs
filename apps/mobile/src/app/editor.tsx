@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { SupporterShell } from '@/components/SupporterShell';
 import { SymbolImage } from '@/components/Tile';
 import { Btn, Card, Icon, Row, Segmented, Toggle, Txt } from '@/components/ui';
+import { useLayout } from '@/lib/layout';
 import { useProfile } from '@/lib/store';
 import { GROUP_COLORS, GROUP_ORDER } from '@/lib/theme';
 
@@ -11,6 +12,7 @@ const SIZES = ['3x2', '4x3', '6x4', '8x5', '10x6'] as const;
 
 export default function Editor() {
   const { profile, palette, updateProfile, updateWord } = useProfile();
+  const L = useLayout();
   const [pageId, setPageId] = useState(profile.pages[0]?.id);
   const page = profile.pages.find((p) => p.id === pageId) ?? profile.pages[0];
   const [sel, setSel] = useState<string>('0:0');
@@ -38,17 +40,21 @@ export default function Editor() {
   };
 
   const gap = 8;
-  const cw = box.w ? (box.w - gap * (page.cols - 1)) / page.cols : 0;
-  const ch = box.h ? (box.h - gap * (page.rows - 1)) / page.rows : 0;
+  // Same orientation as the board on this device (rotated when held upright).
+  const transpose = L.portrait && page.cols > page.rows;
+  const nCols = transpose ? page.rows : page.cols;
+  const nRows = transpose ? page.cols : page.rows;
+  const cw = box.w ? (box.w - gap * (nCols - 1)) / nCols : 0;
+  const ch = box.h ? (box.h - gap * (nRows - 1)) / nRows : 0;
   const img = Math.max(20, Math.min(cw * 0.55, ch * 0.5));
   const selId = page.cells[sel];
   const w = selId ? profile.words[selId] : undefined;
 
   const rows = [];
-  for (let r = 0; r < page.rows; r++) {
+  for (let r = 0; r < nRows; r++) {
     const cells = [];
-    for (let c = 0; c < page.cols; c++) {
-      const key = `${r}:${c}`;
+    for (let c = 0; c < nCols; c++) {
+      const key = transpose ? `${c}:${r}` : `${r}:${c}`;
       const id = page.cells[key];
       const word = id ? profile.words[id] : undefined;
       const g = GROUP_COLORS[word?.group ?? 'misc'];
@@ -83,11 +89,11 @@ export default function Editor() {
         {profile.pages.map((p) => <Btn key={p.id} label={p.name} selected={p.id === page.id} onPress={() => { setPageId(p.id); setSel('0:0'); setMoving(null); }} />)}
       </ScrollView>
       <Txt soft size={14}>Tap a space to edit it. Words never move unless you move them. Making the grid smaller only hides the outer spaces; nothing is lost.</Txt>
-      <View style={{ flex: 1, flexDirection: 'row', gap: 16, flexWrap: 'wrap' }}>
-        <View style={{ flex: 1, minWidth: 360, minHeight: 320, gap }} onLayout={(e: LayoutChangeEvent) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+      <ScrollView style={{ flex: 1 }} scrollEnabled={L.compact} contentContainerStyle={{ flexGrow: 1, flexDirection: L.compact ? 'column' : 'row', gap: 16 }}>
+        <View style={L.compact ? { height: Math.round(L.width * 1.25), gap } : { flex: 1, minWidth: 360, minHeight: 320, gap }} onLayout={(e: LayoutChangeEvent) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
           {box.w ? rows : null}
         </View>
-        <Card style={{ width: 320, flexGrow: 0 }}>
+        <Card style={L.compact ? {} : { width: 320, flexGrow: 0 }}>
           {moving ? (
             <>
               <Txt display size={19}>Moving “{profile.words[page.cells[moving]]?.label}”</Txt>
@@ -131,7 +137,7 @@ export default function Editor() {
             </View>
           )}
         </Card>
-      </View>
+      </ScrollView>
     </SupporterShell>
   );
 }

@@ -13,6 +13,9 @@ npm run typecheck && npm run lint
 - `src/lib/speech.ts` – speech engine (recording → HD clip → device voice). No network needed.
 - `src/lib/store.tsx` – everything is saved on the device (AsyncStorage on native, IndexedDB on web).
 - `src/lib/vocab.ts` – starting boards for each profile. Words live in fixed `row:col` cells.
+- Phone- and iPad-first: `src/lib/layout.ts` decides phone/tablet and orientation. Held upright, wide
+  grids are drawn rotated (6 × 4 shows as 4 × 6) so tiles stay pressable; the editor shows the same view.
+- Web: `src/lib/webSetup.web.ts` stops text selection, the iOS callout, image drag and double-tap zoom.
 - `assets/symbols/` – bundled offline symbols; `src/lib/builtin.ts` is generated from that folder.
 
 iOS release: `npx eas-cli@latest build -p ios --profile production`, then `eas submit -p ios`.

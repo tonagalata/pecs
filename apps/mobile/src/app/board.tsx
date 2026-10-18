@@ -1,13 +1,14 @@
-import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
+import React, { useState } from 'react';
+import { Pressable, ScrollView, View, type LayoutChangeEvent } from 'react-native';
 import { router, type Href } from 'expo-router';
+import { HoldButton } from '@/components/HoldButton';
 import { MessageBar } from '@/components/MessageBar';
 import { EmptyCell, SymbolImage, Tile } from '@/components/Tile';
-import { Btn, Icon, Row, Screen, Txt } from '@/components/ui';
+import { Btn, Icon, Row, Screen, Txt, type IconName } from '@/components/ui';
+import { useLayout } from '@/lib/layout';
 import { useMessage } from '@/lib/message';
 import { speak } from '@/lib/speech';
 import { useProfile } from '@/lib/store';
-import { FONTS } from '@/lib/theme';
 import type { Page } from '@/lib/types';
 
 const PREDICT: Record<string, string[]> = {
@@ -19,28 +20,44 @@ const PREDICT: Record<string, string[]> = {
   "don't": ['want', 'know', 'like', 'feel', 'understand', 'need'],
 };
 
-function Grid({ page, adult }: { page: Page; adult: boolean }) {
+const LINKS: { label: string; href: Href; symbol?: string; icon?: IconName }[] = [
+  { label: 'Feelings', href: '/feelings', symbol: 'happy' },
+  { label: 'My day', href: '/schedule', symbol: 'bus' },
+  { label: 'ABC', href: '/keyboard', icon: 'type' },
+  { label: 'Show', href: '/show', icon: 'maximize' },
+];
+
+/**
+ * The word grid. On a phone held upright the grid is shown rotated (rows become columns), so a
+ * 6 × 4 board becomes 4 × 6 with tiles big enough to press. Every word keeps the same neighbors,
+ * and the arrangement is always the same on that phone, so motor plans still hold.
+ */
+function Grid({ page, adult, transpose }: { page: Page; adult: boolean; transpose: boolean }) {
   const { profile, settings } = useProfile();
   const msg = useMessage();
   const [box, setBox] = useState({ w: 0, h: 0 });
-  const gap = settings.extraGap ? 18 : adult ? 8 : 10;
-  const cellW = box.w ? (box.w - gap * (page.cols - 1)) / page.cols : 0;
-  const cellH = box.h ? (box.h - gap * (page.rows - 1)) / page.rows : 0;
-  const img = Math.max(24, Math.min(cellW * 0.62, cellH * (adult ? 0.42 : 0.55)));
-  const font = Math.max(10, Math.min(adult ? 19 : 22, cellW / 5.2));
+  const cols = transpose ? page.rows : page.cols;
+  const rowsN = transpose ? page.cols : page.rows;
+  const gap = settings.extraGap ? 14 : box.w < 500 ? 6 : adult ? 8 : 10;
+  const cellW = box.w ? (box.w - gap * (cols - 1)) / cols : 0;
+  const cellH = box.h ? (box.h - gap * (rowsN - 1)) / rowsN : 0;
+  const img = Math.max(18, Math.min(cellW * 0.62, cellH * (adult ? 0.45 : 0.52)));
+  const font = Math.max(11, Math.min(adult ? 19 : 22, cellW / 5));
   const onLayout = (e: LayoutChangeEvent) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
 
   const rows = [];
-  for (let r = 0; r < page.rows; r++) {
+  for (let r = 0; r < rowsN; r++) {
     const cells = [];
-    for (let c = 0; c < page.cols; c++) {
-      const id = page.cells[`${r}:${c}`];
+    for (let c = 0; c < cols; c++) {
+      const key = transpose ? `${c}:${r}` : `${r}:${c}`;
+      const id = page.cells[key];
       const w = id ? profile.words[id] : undefined;
       cells.push(
         w && !w.hidden ? (
-          <Tile key={`${page.id}:${w.id}`} label={w.label} group={w.group} symbol={w} imageSize={img} fontSize={font} variant={adult ? 'bar' : 'tinted'}
+          <Tile key={`${page.id}:${w.id}`} label={w.label} group={w.group} symbol={w} imageSize={img} fontSize={font} cellWidth={cellW} cellHeight={cellH} variant={adult ? 'bar' : 'tinted'}
+            style={{ borderRadius: cellW < 80 ? 12 : 18 }}
             onSelect={() => msg.add({ text: w.say ?? w.label, wordId: w.id })} />
-        ) : <EmptyCell key={`${page.id}:e${c}`} />,
+        ) : <EmptyCell key={`${page.id}:e${key}`} />,
       );
     }
     rows.push(<View key={r} style={{ flex: 1, flexDirection: 'row', gap }}>{cells}</View>);
@@ -48,43 +65,38 @@ function Grid({ page, adult }: { page: Page; adult: boolean }) {
   return <View style={{ flex: 1, gap }} onLayout={onLayout}>{box.w ? rows : null}</View>;
 }
 
-function LockButton() {
+function Lock({ compact }: { compact: boolean }) {
   const { profile } = useProfile();
-  const [hint, setHint] = useState(false);
-  const self = profile.settings.selfManage;
+  if (profile.settings.selfManage) {
+    return (
+      <Pressable accessibilityRole="button" accessibilityLabel="Settings" onPress={() => router.push('/supporter')}
+        style={{ width: compact ? 56 : 84, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+        <Icon name="settings" size={24} />
+        {!compact ? <Txt size={12} bold>Settings</Txt> : null}
+      </Pressable>
+    );
+  }
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={self ? 'Settings' : 'Supporter area. Press and hold for 2 seconds.'}
-      onPress={() => { if (self) router.push('/supporter'); else { setHint(true); setTimeout(() => setHint(false), 2000); } }}
-      onLongPress={() => router.push('/unlock')}
-      delayLongPress={2000}
-      style={{ width: 84, alignItems: 'center', justifyContent: 'center', gap: 4, opacity: 0.75 }}
-    >
-      <Icon name={self ? 'settings' : 'lock'} size={24} />
-      <Txt size={12} bold center>{self ? 'Settings' : hint ? 'Keep holding…' : 'Hold to unlock'}</Txt>
-    </Pressable>
+    <HoldButton icon="lock" label={compact ? 'Hold' : 'Hold to unlock'} holdingLabel={compact ? 'Hold…' : 'Keep holding…'}
+      accessibilityLabel="Supporter area" onDone={() => router.push('/unlock')} style={{ width: compact ? 60 : 88 }} />
   );
 }
 
 export default function Board() {
   const { profile, palette, updateProfile } = useProfile();
   const msg = useMessage();
-  const { width } = useWindowDimensions();
+  const L = useLayout();
   const adult = profile.level === 'adult';
   const [pageId, setPageId] = useState(profile.pages[0]?.id);
   const page = profile.pages.find((p) => p.id === pageId) ?? profile.pages[0];
-  const wide = width >= 900;
+  // Held upright (phone or iPad), wide grids are shown rotated so tiles stay close to square.
+  const transpose = L.portrait && !!page && page.cols > page.rows;
+  const compact = L.phone;
+  const flat = L.phone && !L.portrait;
+  const showPhrases = adult && L.wide;
 
   const last = (msg.items[msg.items.length - 1]?.text ?? '').toLowerCase().split(' ').pop() ?? '';
   const suggestions = PREDICT[last] ?? ['please', 'now', 'later', 'thank you', 'because', 'and'];
-
-  const links: { label: string; href: Href; icon?: string; feather?: React.ComponentProps<typeof Icon>['name'] }[] = useMemo(() => [
-    { label: 'Feelings', href: '/feelings', icon: 'happy' },
-    { label: 'My day', href: '/schedule', icon: 'bus' },
-    { label: 'ABC', href: '/keyboard', feather: 'type' },
-    { label: 'Show', href: '/show', feather: 'maximize' },
-  ], []);
 
   const savePhrase = () => {
     const t = msg.text.trim();
@@ -93,26 +105,33 @@ export default function Board() {
     updateProfile((p) => ({ ...p, phrases: [phrase, ...p.phrases.filter((x) => x !== phrase)] }));
   };
 
-  const tabH = adult ? 64 : 100;
+  // Bottom bar: word groups and tools. Scrolls sideways on phones; the lock stays pinned.
+  const barH = flat ? 46 : compact ? 62 : adult ? 64 : 96;
+  const symbolSize = flat ? 0 : compact ? 28 : 44;
+  const chip = (on: boolean) => ({
+    flexGrow: compact ? 0 : 1, minWidth: compact ? 72 : L.medium ? 80 : 96, paddingHorizontal: compact ? 10 : 8, height: barH, borderRadius: compact ? 14 : 16,
+    borderWidth: on ? 3 : 1.5, borderColor: on ? palette.accent : palette.line, backgroundColor: on ? palette.accentSoft : palette.surface,
+    alignItems: 'center' as const, justifyContent: 'center' as const, gap: compact ? 2 : 4,
+  });
+
   return (
-    <Screen>
+    <Screen style={{ padding: flat ? 6 : L.pad, gap: flat ? 6 : L.phone ? 8 : 12 }}>
       <MessageBar mode={adult ? 'text' : 'chips'} height={adult ? 92 : 120} />
-      {adult ? (
-        <Row gap={8} style={{ height: 52 }}>
-          {wide ? <Txt soft bold size={15} style={{ width: 52 }}>Next</Txt> : null}
-          {suggestions.slice(0, width < 640 ? 4 : 6).map((sug) => (
-            <Btn key={sug} label={sug} onPress={() => msg.addText(sug)} style={{ flex: 1, borderStyle: 'dashed', height: 52 }} />
+      {adult && !flat ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, flexGrow: 1 }}>
+          {L.wide ? <Txt soft bold size={15} style={{ width: 52, alignSelf: 'center' }}>Next</Txt> : null}
+          {suggestions.map((sug) => (
+            <Btn key={sug} label={sug} onPress={() => msg.addText(sug)} style={{ flexGrow: 1, minWidth: compact ? 84 : 110, borderStyle: 'dashed', minHeight: compact ? 44 : 52 }} />
           ))}
-        </Row>
+        </ScrollView>
       ) : null}
       <View style={{ flex: 1, flexDirection: 'row', gap: 12 }}>
-        <View style={{ flex: 1 }}>{page ? <Grid page={page} adult={adult} /> : null}</View>
-        {adult && wide ? (
+        <View style={{ flex: 1 }}>{page ? <Grid page={page} adult={adult} transpose={transpose} /> : null}</View>
+        {showPhrases ? (
           <View style={{ width: 280, backgroundColor: palette.surface, borderColor: palette.line, borderWidth: 1, borderRadius: 18, padding: 14, gap: 8 }}>
             <Row style={{ justifyContent: 'space-between' }}>
               <Txt display size={18}>Saved phrases</Txt>
-              <Btn icon="plus" label="Save" disabled={!msg.text}
-                onPress={savePhrase} style={{ minHeight: 40 }} />
+              <Btn icon="plus" label="Save" disabled={!msg.text} onPress={savePhrase} style={{ minHeight: 40 }} />
             </Row>
             <ScrollView contentContainerStyle={{ gap: 8 }}>
               {profile.phrases.map((ph) => (
@@ -125,32 +144,33 @@ export default function Board() {
           </View>
         ) : null}
       </View>
-      <ScrollView horizontal={!wide} scrollEnabled={!wide} contentContainerStyle={{ flexGrow: 1 }} style={{ flexGrow: 0, height: tabH }} showsHorizontalScrollIndicator={false}>
-        <View style={{ flex: 1, flexDirection: 'row', gap: 8, height: tabH }}>
+      <View style={{ flexDirection: 'row', height: barH, gap: 8 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ gap: 8, flexGrow: 1 }}>
           {profile.pages.map((p) => {
             const on = p.id === page?.id;
             const iw = p.iconWord ? profile.words[p.iconWord] : undefined;
             return (
-              <Pressable key={p.id} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => setPageId(p.id)}
-                style={{ flex: 1, minWidth: 96, borderRadius: 16, borderWidth: on ? 3 : 1.5, borderColor: on ? palette.accent : palette.line, backgroundColor: on ? palette.accentSoft : palette.surface, alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 8 }}>
-                {!adult && iw ? <SymbolImage item={iw} size={46} /> : null}
-                <Txt bold size={adult ? 17 : 16} style={{ fontFamily: FONTS.bodyBold }}>{p.name}</Txt>
+              <Pressable key={p.id} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => setPageId(p.id)} style={chip(on)}>
+                {!adult && iw && symbolSize ? <SymbolImage item={iw} size={symbolSize} /> : null}
+                <Txt bold size={compact ? 14 : 16} numberOfLines={1}>{p.name}</Txt>
               </Pressable>
             );
           })}
-          {links.map((l) => (
-            <Pressable key={l.label} accessibilityRole="link" onPress={() => router.push(l.href)}
-              style={{ flex: 1, minWidth: 96, borderRadius: 16, borderWidth: 1.5, borderColor: palette.line, backgroundColor: palette.surface, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-              {!adult && l.icon ? <SymbolImage item={{ symbol: { kind: 'none' }, fallback: l.icon }} size={46} /> : null}
-              {!adult && l.feather ? <Icon name={l.feather} size={36} /> : null}
-              <Txt bold size={adult ? 17 : 16}>{l.label}</Txt>
+          {adult && !showPhrases ? (
+            <Pressable accessibilityRole="button" onPress={() => router.push('/show')} style={chip(false)}>
+              <Txt bold size={compact ? 14 : 16}>Phrases</Txt>
+            </Pressable>
+          ) : null}
+          {LINKS.map((l) => (
+            <Pressable key={l.label} accessibilityRole="link" onPress={() => router.push(l.href)} style={chip(false)}>
+              {!adult && l.symbol && symbolSize ? <SymbolImage item={{ symbol: { kind: 'none' }, fallback: l.symbol }} size={symbolSize} /> : null}
+              {!adult && l.icon && symbolSize ? <Icon name={l.icon} size={compact ? 24 : 34} /> : null}
+              <Txt bold size={compact ? 14 : 16} numberOfLines={1}>{l.label}</Txt>
             </Pressable>
           ))}
-          <LockButton />
-        </View>
-      </ScrollView>
+        </ScrollView>
+        <Lock compact={compact} />
+      </View>
     </Screen>
   );
-
 }
-

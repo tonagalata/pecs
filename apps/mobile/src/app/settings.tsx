@@ -53,7 +53,7 @@ export default function SettingsScreen() {
   return (
     <SupporterShell title="Settings" actions={<Txt soft size={15}>for {profile.name} · changes save straight away</Txt>}>
       <ScrollView contentContainerStyle={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, paddingBottom: 30, alignItems: 'flex-start' }}>
-        <View style={{ flex: 1, minWidth: 340, gap: 14 }}>
+        <View style={{ flexGrow: 1, flexBasis: 320, minWidth: 0, gap: 14 }}>
           <Card>
             <Txt display size={18}>Voice and sound</Txt>
             <Line label="Voice" hint="Built into this device. Works offline and costs nothing.">
@@ -102,7 +102,7 @@ export default function SettingsScreen() {
             <Line label="Show times on the schedule"><Toggle label="Show times on the schedule" value={st.showTimes} onChange={set('showTimes')} /></Line>
           </Card>
         </View>
-        <View style={{ flex: 1, minWidth: 340, gap: 14 }}>
+        <View style={{ flexGrow: 1, flexBasis: 320, minWidth: 0, gap: 14 }}>
           <Card>
             <Txt display size={18}>Calm and sensory</Txt>
             <Line label="Reduce movement" hint="No sliding, bouncing, vibration or animated screens"><Toggle label="Reduce movement" value={st.reduceMotion} onChange={set('reduceMotion')} /></Line>
