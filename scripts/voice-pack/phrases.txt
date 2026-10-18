@@ -1,0 +1,156 @@
+# One word or phrase per line. Each becomes one clip in the HD voice pack.
+# Anything not listed is spoken by the device voice instead, so this list never needs to be complete.
+a
+a break
+and
+angry
+anxious
+apple
+banana
+bath
+Bath and bed
+bathroom
+because
+bedroom
+big
+break
+Breakfast
+brother
+bus
+Bus to school
+calm
+can
+can you
+Can you write it down?
+car
+cereal
+cold
+cookie
+Dad
+dentist
+different
+doctor
+don't
+draw
+drink
+eat
+excited
+feel
+finished
+food
+friend
+Get dressed
+go
+good
+happy
+he
+head
+Hello, I am ready to talk.
+help
+here
+home
+Home
+hot
+how
+hurt
+i
+I
+I don't understand. Can you show me?
+I feel angry.
+I feel happy.
+I feel overwhelmed.
+I feel sad.
+I feel scared.
+I feel sick.
+I feel tired.
+i need
+I need a break.
+I need a break. Please give me a few minutes.
+I need a minute.
+I need help, please.
+I need help.
+I need the bathroom.
+I understand, I just can't talk right now.
+I want more.
+I want to go home.
+I'm finished.
+It is too loud for me.
+juice
+know
+later
+like
+little
+look
+Lunch
+me
+medicine
+milk
+Mom
+mom
+more
+music
+my
+need
+no
+No, thank you.
+not
+now
+okay
+outside
+overwhelmed
+park
+Park
+people
+pizza
+play
+please
+Please give me some space.
+Please speak more slowly.
+Please wait. I am thinking.
+quiet
+read
+Reading
+sad
+sandwich
+scared
+school
+she
+shop
+sick
+sister
+sleep
+snack
+stomach
+stop
+Stop, please.
+swim
+tablet
+teacher
+thank you
+the
+there
+they
+think
+This is how I sound.
+time
+tired
+to
+to go
+too loud
+toys
+TV
+understand
+walk
+want
+water
+we
+what
+when
+where
+who
+why
+work
+yes
+Yes, please.
+you
+your

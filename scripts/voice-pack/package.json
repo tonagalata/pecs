@@ -1,0 +1,9 @@
+{
+  "name": "pictotalk-voice-pack",
+  "private": true,
+  "type": "module",
+  "description": "Generates the optional HD voice pack with Kokoro-82M (Apache-2.0), on your own machine, for free.",
+  "dependencies": {
+    "kokoro-js": "^1.2.1"
+  }
+}

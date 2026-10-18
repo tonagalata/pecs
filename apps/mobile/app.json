@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "PictoTalk",
+    "slug": "pictotalk",
+    "version": "2.0.0",
+    "orientation": "default",
+    "icon": "./assets/images/icon.png",
+    "scheme": "pictotalk",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "icon": "./assets/expo.icon",
+      "supportsTablet": true,
+      "bundleIdentifier": "org.pictotalk.app",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "org.pictotalk.app"
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/images/favicon.png",
+      "name": "PictoTalk",
+      "shortName": "PictoTalk",
+      "themeColor": "#1E5C73",
+      "backgroundColor": "#F2F5F4"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F2F5F4",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 76
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "PictoTalk uses the microphone only when you record a word in a family member's voice. Recordings stay on this device."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "PictoTalk lets you choose photos of real people, places and things to use as pictures on the board. Photos stay on this device.",
+          "cameraPermission": "PictoTalk lets you take photos of real things to use as pictures on the board. Photos stay on this device.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
