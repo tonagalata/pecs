@@ -6,7 +6,8 @@ export const metadata: Metadata = {
   description:
     "A free communication board for autistic children, teens and adults. Tap pictures to build a message and your device says it out loud. Works offline, no account, nothing collected.",
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/favicon.ico", apple: "/icon.png" },
+  // app/favicon.ico is linked automatically; browsers that support SVG favicons prefer this one.
+  icons: { icon: [{ url: "/favicon.svg", type: "image/svg+xml" }], apple: "/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {
