@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, View, type LayoutChangeEvent } from 'react-native';
 import { router, type Href } from 'expo-router';
 import { HoldButton } from '@/components/HoldButton';
 import { MessageBar } from '@/components/MessageBar';
 import { EmptyCell, SymbolImage, Tile } from '@/components/Tile';
 import { Btn, Icon, Row, Screen, Txt, type IconName } from '@/components/ui';
+import { cellKey, sheetCount } from '@/lib/grid';
 import { useLayout } from '@/lib/layout';
 import { useMessage } from '@/lib/message';
 import { speak } from '@/lib/speech';
@@ -32,7 +33,7 @@ const LINKS: { label: string; href: Href; symbol?: string; icon?: IconName }[] =
  * 6 × 4 board becomes 4 × 6 with tiles big enough to press. Every word keeps the same neighbors,
  * and the arrangement is always the same on that phone, so motor plans still hold.
  */
-function Grid({ page, adult, transpose }: { page: Page; adult: boolean; transpose: boolean }) {
+function Grid({ page, sheet, adult, transpose }: { page: Page; sheet: number; adult: boolean; transpose: boolean }) {
   const { profile, settings } = useProfile();
   const msg = useMessage();
   const [box, setBox] = useState({ w: 0, h: 0 });
@@ -49,7 +50,7 @@ function Grid({ page, adult, transpose }: { page: Page; adult: boolean; transpos
   for (let r = 0; r < rowsN; r++) {
     const cells = [];
     for (let c = 0; c < cols; c++) {
-      const key = transpose ? `${c}:${r}` : `${r}:${c}`;
+      const key = transpose ? cellKey(sheet, c, r) : cellKey(sheet, r, c);
       const id = page.cells[key];
       const w = id ? profile.words[id] : undefined;
       cells.push(
@@ -63,6 +64,30 @@ function Grid({ page, adult, transpose }: { page: Page; adult: boolean; transpos
     rows.push(<View key={r} style={{ flex: 1, flexDirection: 'row', gap }}>{cells}</View>);
   }
   return <View style={{ flex: 1, gap }} onLayout={onLayout}>{box.w ? rows : null}</View>;
+}
+
+/** Big previous / next arrows beside the grid when a section has more words than fit. */
+function PageArrow({ dir, sheet, count, section, compact, onPress }: { dir: -1 | 1; sheet: number; count: number; section: string; compact: boolean; onPress: () => void }) {
+  const { palette } = useProfile();
+  const disabled = dir < 0 ? sheet === 0 : sheet >= count - 1;
+  const target = sheet + dir + 1;
+  return (
+    <Pressable accessibilityRole="button" disabled={disabled}
+      accessibilityLabel={dir < 0 ? `Previous page of ${section}, page ${target} of ${count}` : `Next page of ${section}, page ${target} of ${count}`}
+      accessibilityState={{ disabled }} onPress={onPress}
+      style={({ pressed }) => ({
+        width: compact ? 52 : 88, borderRadius: compact ? 14 : 20, alignItems: 'center', justifyContent: 'center', gap: 6,
+        backgroundColor: disabled ? 'transparent' : pressed ? palette.accent : palette.accentSoft,
+        borderWidth: 3, borderColor: disabled ? palette.line : palette.accent, opacity: disabled ? 0.35 : 1,
+      })}>
+      {({ pressed }) => (
+        <>
+          <Icon name={dir < 0 ? 'chevron-left' : 'chevron-right'} size={compact ? 40 : 64} color={pressed && !disabled ? palette.onAccent : palette.ink} />
+          <Txt bold size={compact ? 13 : 16} color={pressed && !disabled ? palette.onAccent : palette.ink}>{sheet + 1} / {count}</Txt>
+        </>
+      )}
+    </Pressable>
+  );
 }
 
 function Lock({ compact }: { compact: boolean }) {
@@ -89,6 +114,11 @@ export default function Board() {
   const adult = profile.level === 'adult';
   const [pageId, setPageId] = useState(profile.pages[0]?.id);
   const page = profile.pages.find((p) => p.id === pageId) ?? profile.pages[0];
+  // Sections with more words than spaces are split into pages, turned with the big arrows.
+  const sheets = page ? sheetCount(page, (id) => !!profile.words[id] && !profile.words[id].hidden) : 1;
+  const [sheetState, setSheet] = useState(0);
+  const sheet = Math.min(sheetState, sheets - 1);
+  useEffect(() => { setSheet(0); }, [page?.id]);
   // Held upright (phone or iPad), wide grids are shown rotated so tiles stay close to square.
   const transpose = L.portrait && !!page && page.cols > page.rows;
   const compact = L.phone;
@@ -125,8 +155,10 @@ export default function Board() {
           ))}
         </ScrollView>
       ) : null}
-      <View style={{ flex: 1, flexDirection: 'row', gap: 12 }}>
-        <View style={{ flex: 1 }}>{page ? <Grid page={page} adult={adult} transpose={transpose} /> : null}</View>
+      <View style={{ flex: 1, flexDirection: 'row', gap: compact ? 6 : 12 }}>
+        {sheets > 1 && page ? <PageArrow dir={-1} sheet={sheet} count={sheets} section={page.name} compact={compact} onPress={() => setSheet(Math.max(0, sheet - 1))} /> : null}
+        <View style={{ flex: 1 }}>{page ? <Grid key={`${page.id}:${sheet}`} page={page} sheet={sheet} adult={adult} transpose={transpose} /> : null}</View>
+        {sheets > 1 && page ? <PageArrow dir={1} sheet={sheet} count={sheets} section={page.name} compact={compact} onPress={() => setSheet(Math.min(sheets - 1, sheet + 1))} /> : null}
         {showPhrases ? (
           <View style={{ width: 280, backgroundColor: palette.surface, borderColor: palette.line, borderWidth: 1, borderRadius: 18, padding: 14, gap: 8 }}>
             <Row style={{ justifyContent: 'space-between' }}>

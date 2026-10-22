@@ -40,15 +40,34 @@ voice, made for AAC apps) through a small native module. Both slot into step 3 o
 - Boards, words, settings: one JSON document on the device (AsyncStorage on iOS/Android,
   IndexedDB on web, with `navigator.storage.persist()` requested).
 - Photos: picked from the camera roll or camera, resized to 512 px, copied into the app's
-  document folder (native) or kept as data URLs in IndexedDB (web). Never uploaded.
-- Recordings: `expo-audio`, saved next to the photos. Never uploaded.
+  document folder (native) or kept as data URLs in IndexedDB (web). Uploaded only for a board
+  the parent chooses to share.
+- Recordings: `expo-audio`, saved next to the photos. Uploaded only for a shared board.
 - Symbols: ARASAAC pictograms, cached on the device by `expo-image` after first use, with a
   bundled PictoTalk set (`apps/mobile/assets/symbols`) as the offline fallback. Settings has
   "Download symbols for offline use". On web, a service worker (`apps/mobile/public/sw.js`)
   keeps the board's code and the saved symbols, so `/app/` also opens without internet.
-- Words live in fixed `row:col` cells. Shrinking the grid hides cells instead of moving words,
-  and "hidden" words keep their place. (The old board shuffled cards on every load, which
+- Words live in fixed cells (`row:col`, or `page:row:col` past the first page). Shrinking the
+  grid moves extra words onto more pages in the same order, and "hidden" words keep their place. (The old board shuffled cards on every load, which
   breaks the motor memory people rely on with AAC.)
+
+## Pages, offline, backups and sharing
+
+- **Pages inside a section.** When a section has more words than its grid holds (12 foods on a
+  2 × 2 grid), the words continue on more pages and big ◀ ▶ arrows appear beside the grid.
+  Changing the grid size keeps every word in reading order, and changing it back restores the
+  layout (`apps/mobile/src/lib/grid.ts`).
+- **Offline web app.** `npm run build:web` (and the Dockerfile) runs `scripts/pwa.mjs` after the
+  Expo export: it writes the web app manifest and gives `public/sw.js` the full file list, so the
+  whole app is saved on first visit. Symbols on the board and the HD voice pack are saved too.
+- **Backups.** Settings › Move to a new device exports a JSON file with the boards, settings,
+  photos and recordings, and imports it on another device. History and sharing access are left out.
+- **Sharing.** Supporter area › Sharing lets a parent invite therapists, teachers and family with
+  one-time codes (can edit / can view). Every device keeps a full copy and works offline; changes
+  are merged when online (`src/lib/sync.ts`, `src/lib/doc.ts`, `server/api.mjs`). It needs the
+  app's database (`tona db add pictotalk`); without one `/api/` answers 503 and the rest works as
+  before. Native builds talk to `EXPO_PUBLIC_SYNC_URL` (default `https://pictotalk.org`); the web
+  app uses its own origin.
 
 ## Run locally
 

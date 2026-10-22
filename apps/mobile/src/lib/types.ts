@@ -67,6 +67,28 @@ export interface Settings {
   keepHistory: boolean;
 }
 
+export type ShareRole = 'owner' | 'edit' | 'view';
+
+/** This board is shared: how this device reaches the shared copy. See src/lib/sync.ts. */
+export interface SyncLink {
+  server: string;
+  boardId: string;
+  /** Secret for this device. Never exported in backups. */
+  token: string;
+  role: ShareRole;
+  memberId: string;
+  memberName: string;
+  /** Server revision of `base`. */
+  rev: number;
+  /** The shared board as last agreed with the server (photos and recordings as media ids). */
+  base: unknown;
+  /** Media id -> file uri (native) or data URL (web) on this device. */
+  media: Record<string, string>;
+  lastSync?: number;
+  status?: 'ok' | 'offline' | 'error' | 'removed';
+  error?: string;
+}
+
 export interface Profile {
   id: string;
   name: string;
@@ -79,6 +101,7 @@ export interface Profile {
   scheduleNote?: string;
   history: string[];
   settings: Settings;
+  sync?: SyncLink;
 }
 
 export interface AppState {
