@@ -99,7 +99,8 @@ tona env set pictotalk CANONICAL_HOST=pictotalk.org # optional: redirect www etc
 
 - **Postgres:** `--db` gives the app its own database on the shared RDS instance and injects
   `DATABASE_URL`. `server/` runs `server/migrations/*.sql` on start, before taking traffic.
-  Nothing is stored there yet (see [server/migrations/README.md](server/migrations/README.md)).
+  It holds shared boards only (see [server/migrations/README.md](server/migrations/README.md)).
+  For an app created without `--db`, run `tona db add pictotalk` to turn sharing on.
 - **Build-time settings:** `NEXT_PUBLIC_*` and `EXPO_PUBLIC_*` values are baked in at build, so
   they are Docker build args (`CONTACT_EMAIL`, `APP_STORE_URL`, `VOICE`, `VOICE_PACK_VERSION`),
   not Tona env vars.
