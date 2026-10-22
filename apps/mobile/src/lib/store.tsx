@@ -1,10 +1,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { loadState, saveState } from './storage';
 import { resolveMissing } from './symbols';
-import { prepareVoices } from './speech';
+import { installVoicePack, prepareVoices, voicePackAvailable, voicePackLoaded } from './speech';
 import { PALETTES, type Palette } from './theme';
 import type { AppState, Level, Profile, Settings, Word } from './types';
-import { createProfile, DEFAULT_SETTINGS } from './vocab';
+import { createProfile, DEFAULT_SETTINGS, REPLACED_ARASAAC } from './vocab';
 
 const EMPTY: AppState = { version: 1, profiles: [], activeId: null, arasaacIds: {} };
 
@@ -25,6 +25,20 @@ interface Ctx {
 
 const AppCtx = createContext<Ctx | null>(null);
 
+/** Give built-in words saved with a broken ARASAAC pictogram the corrected one. */
+function fixBrokenSymbols(s: AppState): AppState {
+  const profiles = s.profiles.map((p) => {
+    let changed = false;
+    const words = { ...p.words };
+    for (const [id, fix] of Object.entries(REPLACED_ARASAAC)) {
+      const w = words[id];
+      if (w?.symbol.kind === 'arasaac' && w.symbol.id === fix.from) { words[id] = { ...w, symbol: { kind: 'arasaac', id: fix.to } }; changed = true; }
+    }
+    return changed ? { ...p, words } : p;
+  });
+  return { ...s, profiles };
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(EMPTY);
   const [ready, setReady] = useState(false);
@@ -34,10 +48,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       const saved = await loadState<AppState>();
-      if (saved && saved.version === 1) setState(saved);
+      if (saved && saved.version === 1) setState(fixBrokenSymbols(saved));
       setReady(true);
       await prepareVoices();
       setVoicesReady(true);
+      // HD voice is on by default: fetch the pack in the background if it isn't on the device yet.
+      const wantsHd = saved?.profiles?.length ? saved.profiles.some((p) => p.settings.hdVoice) : DEFAULT_SETTINGS.hdVoice;
+      if (wantsHd && voicePackAvailable() && !voicePackLoaded()) installVoicePack().catch(() => {});
     })();
   }, []);
 

@@ -5,7 +5,8 @@ import { SupporterShell } from '@/components/SupporterShell';
 import { Btn, Card, Row, Segmented, Toggle, Txt } from '@/components/ui';
 import { installVoicePack, listVoices, speak, voicePackAvailable, voicePackLoaded } from '@/lib/speech';
 import { useProfile } from '@/lib/store';
-import { arasaacUrl, prefetchForOffline } from '@/lib/symbols';
+import { saveForOffline } from '@/lib/symbolCache';
+import { offlineSymbolUrls } from '@/lib/symbols';
 import { FONTS } from '@/lib/theme';
 import type { Settings } from '@/lib/types';
 
@@ -33,14 +34,12 @@ export default function SettingsScreen() {
   useEffect(() => { listVoices().then((v) => setVoices(v.map((x) => ({ id: x.identifier, name: `${x.name}${x.quality === 'Enhanced' ? ' (enhanced)' : ''}` })))); }, []);
 
   const downloadSymbols = async () => {
-    setOfflineMsg('Downloading…');
-    const urls = Object.values(profile.words).flatMap((w) => {
-      if (w.symbol.kind === 'arasaac') return [arasaacUrl(w.symbol.id)];
-      const id = w.lookup ? state.arasaacIds[w.lookup.toLowerCase()] : undefined;
-      return id ? [arasaacUrl(id)] : [];
-    });
-    const ok = await prefetchForOffline(urls);
-    setOfflineMsg(ok ? `${urls.length} symbols saved for offline use.` : 'Some symbols could not be downloaded. Try again with a connection.');
+    const urls = offlineSymbolUrls(profile, state.arasaacIds);
+    setOfflineMsg(`Downloading 0 of ${urls.length}…`);
+    const { saved, failed } = await saveForOffline(urls, (d, t) => setOfflineMsg(`Downloading ${d} of ${t}…`));
+    setOfflineMsg(failed
+      ? `${saved} of ${urls.length} symbols saved. ${failed} could not be downloaded; the built-in pictures are used for those.`
+      : `All ${saved} symbols saved for offline use.`);
   };
 
   const resetProfile = () => {

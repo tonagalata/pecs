@@ -1,9 +1,10 @@
 // Picture lookup. ARASAAC pictograms are fetched from ARASAAC's free public API/CDN and cached on
-// the device by expo-image. Until a pictogram is cached (or with no connection) the bundled
+// the device by expo-image (web: by public/sw.js). Until a pictogram is cached (or with no connection) the bundled
 // PictoTalk symbol is shown, so the board works offline from the very first launch.
-import { Image, type ImageSource } from 'expo-image';
+import type { ImageSource } from 'expo-image';
 import { BUILTIN } from './builtin';
-import type { SymbolRef } from './types';
+import type { Profile, SymbolRef } from './types';
+import { FEELINGS } from './vocab';
 
 const API = process.env.EXPO_PUBLIC_ARASAAC_API ?? 'https://api.arasaac.org/v1';
 /** Point this at the SST CloudFront cache in production (see infra/README.md). */
@@ -75,12 +76,16 @@ export async function resolveMissing(keywords: string[], known: Record<string, n
   return found;
 }
 
-/** Download every pictogram the board uses so it keeps working without internet. */
-export async function prefetchForOffline(urls: string[]): Promise<boolean> {
-  if (!urls.length) return true;
-  try {
-    return await Image.prefetch(urls, 'disk');
-  } catch {
-    return false;
-  }
+/** Every ARASAAC pictogram this person's board, schedule and feelings screen can show. */
+export function offlineSymbolUrls(profile: Profile, ids: Record<string, number>): string[] {
+  const items: SymbolInput[] = [
+    ...Object.values(profile.words),
+    ...profile.schedule.map((s) => ({ symbol: s.symbol, fallback: s.fallback, lookup: s.label.split(' ')[0] })),
+    ...FEELINGS.map((f): SymbolInput => ({ symbol: f.arasaac ? { kind: 'arasaac', id: f.arasaac } : { kind: 'none' }, fallback: f.key })),
+  ];
+  const urls = items.map((w) => {
+    const { source } = resolveSymbol(w, 'arasaac', ids);
+    return source && typeof source === 'object' && 'uri' in source && source.uri?.startsWith(STATIC) ? source.uri : null;
+  });
+  return Array.from(new Set(urls.filter((u): u is string => !!u)));
 }

@@ -4,6 +4,7 @@
 // - no pinch zoom (touch screens and laptop trackpads) and no double-tap zoom or 300 ms tap delay:
 //   the board is sized to fill the screen, and text size is set in Settings instead
 // - full-screen when added to the home screen, content inside the notch safe area
+// - works offline once loaded (service worker)
 let done = false;
 
 function meta(name: string, content: string) {
@@ -36,6 +37,11 @@ export function setupWeb() {
   document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
   // Trackpad pinch on laptops arrives as ctrl + wheel.
   window.addEventListener('wheel', (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // Offline support: app files and saved symbols are served by public/sw.js (production builds only).
+  if (!__DEV__ && 'serviceWorker' in navigator) {
+    const base = process.env.EXPO_BASE_URL ?? '';
+    navigator.serviceWorker.register(`${base}/sw.js`, { scope: `${base}/` }).catch(() => {});
+  }
   // Long press on iOS/Android browsers opens a context menu; the board has no use for it.
   document.addEventListener('contextmenu', (e) => {
     const t = e.target as HTMLElement | null;

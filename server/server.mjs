@@ -65,7 +65,8 @@ async function find(root, urlPath) {
 }
 
 function cacheControl(file) {
-  if (file.endsWith('.html')) return 'no-cache';
+  // The service worker must be re-checked on every visit so board updates reach people.
+  if (file.endsWith('.html') || file.endsWith(`${sep}sw.js`)) return 'no-cache';
   // Content-hashed bundles and the versioned voice pack never change at the same URL.
   if (file.includes(`${sep}_next${sep}static${sep}`) || file.includes(`${sep}_expo${sep}static${sep}`) || file.startsWith(VOICE + sep)) {
     return 'public, max-age=31536000, immutable';

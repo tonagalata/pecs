@@ -208,10 +208,10 @@ export const voicePackLoaded = () => Boolean(manifest);
 
 /**
  * Everything speech needs before the board opens: the device/browser voices and, if there is
- * one, the HD voice pack manifest. Never takes longer than `timeoutMs`, so a slow or missing
- * connection only means the board opens with the device voice.
+ * one, the HD voice pack manifest. Never takes longer than `timeoutMs` (kept under the loading screen's
+ * 5 s auto-refresh), so a slow or missing connection only means the board opens with the device voice.
  */
-export async function prepareVoices(timeoutMs = 6000): Promise<void> {
+export async function prepareVoices(timeoutMs = 4000): Promise<void> {
   const work = Promise.all([listVoices(), loadInstalledPack()]).catch(() => {});
   await Promise.race([work, new Promise((r) => setTimeout(r, timeoutMs))]);
 }

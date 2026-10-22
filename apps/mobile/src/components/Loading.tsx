@@ -1,11 +1,26 @@
-import React from 'react';
-import { Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Platform, Text, View } from 'react-native';
 import { PALETTES } from '@/lib/theme';
 
 // Shown while the board, fonts and voices load. It uses no custom fonts or icon fonts (they may
 // not be loaded yet) and matches the loader in public/index.html, so on web the page goes from
 // that static loader to this one without a flash.
 const P = PALETTES.light;
+
+/** Web: if loading stalls (a dropped request, a stuck font), reload the page by itself. */
+const STALL_MS = 5000;
+const MAX_RELOADS = 3;
+const RELOADS_KEY = 'pictotalk:reloads';
+
+function reloadCount(): number {
+  try { return Number(sessionStorage.getItem(RELOADS_KEY)) || 0; } catch { return MAX_RELOADS; }
+}
+
+/** Call once the app has loaded, so a later stall gets its full set of automatic reloads again. */
+export function resetReloads() {
+  if (Platform.OS !== 'web') return;
+  try { sessionStorage.removeItem(RELOADS_KEY); } catch {}
+}
 
 function Mark() {
   const sq = { position: 'absolute' as const, width: 13, height: 13, borderRadius: 3, borderWidth: 3, borderColor: '#fff' };
@@ -21,16 +36,30 @@ function Mark() {
   );
 }
 
-export function Loading({ status, progress }: { status: string; progress: number }) {
+export function Loading() {
+  const [reloading, setReloading] = useState(false);
+  const [gaveUp, setGaveUp] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const t = setTimeout(() => {
+      const n = reloadCount();
+      if (n >= MAX_RELOADS) { setGaveUp(true); return; }
+      try { sessionStorage.setItem(RELOADS_KEY, String(n + 1)); } catch {}
+      setReloading(true);
+      window.location.reload();
+    }, STALL_MS);
+    return () => clearTimeout(t);
+  }, []);
+
+  const status = gaveUp ? 'Still loading. Check the internet connection.' : reloading ? 'Refreshing…' : 'Loading…';
   return (
-    <View accessibilityRole="progressbar" accessibilityLabel={status} accessibilityValue={{ min: 0, max: 100, now: Math.round(progress * 100) }}
+    <View accessibilityRole="progressbar" accessibilityLabel={status}
       style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 18, padding: 24, backgroundColor: P.ground }}>
       <Mark />
       <Text style={{ fontSize: 26, fontWeight: '600', color: P.ink }}>PictoTalk</Text>
-      <View style={{ width: 220, height: 8, borderRadius: 4, backgroundColor: P.line, overflow: 'hidden' }}>
-        <View style={{ width: `${Math.max(12, progress * 100)}%`, height: '100%', borderRadius: 4, backgroundColor: P.accent }} />
-      </View>
-      <Text style={{ fontSize: 17, color: P.inkSoft }}>{status}</Text>
+      <ActivityIndicator size="large" color={P.accent} />
+      <Text style={{ fontSize: 17, color: P.inkSoft, textAlign: 'center' }}>{status}</Text>
     </View>
   );
 }

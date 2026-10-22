@@ -44,7 +44,8 @@ voice, made for AAC apps) through a small native module. Both slot into step 3 o
 - Recordings: `expo-audio`, saved next to the photos. Never uploaded.
 - Symbols: ARASAAC pictograms, cached on the device by `expo-image` after first use, with a
   bundled PictoTalk set (`apps/mobile/assets/symbols`) as the offline fallback. Settings has
-  "Download symbols for offline use".
+  "Download symbols for offline use". On web, a service worker (`apps/mobile/public/sw.js`)
+  keeps the board's code and the saved symbols, so `/app/` also opens without internet.
 - Words live in fixed `row:col` cells. Shrinking the grid hides cells instead of moving words,
   and "hidden" words keep their place. (The old board shuffled cards on every load, which
   breaks the motor memory people rely on with AAC.)

@@ -22,17 +22,16 @@
         flex: 1;
       }
     </style>
-    <!-- Shown until the app's JavaScript has downloaded; React replaces it with the same layout
+    <!-- Shown until the app's JavaScript has downloaded; React replaces it with the same screen
          (src/components/Loading.tsx) while the board and voices load. -->
     <style>
       .boot { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px;
         background: #f2f5f4; color: #17302e; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
       .boot-title { font-size: 26px; font-weight: 600; margin: 0; }
       .boot-status { font-size: 17px; color: #485a57; margin: 0; }
-      .boot-bar { width: 220px; height: 8px; border-radius: 4px; background: #d8e0dd; overflow: hidden; }
-      .boot-bar span { display: block; width: 35%; height: 100%; border-radius: 4px; background: #1e5c73; animation: boot 1.6s ease-in-out infinite; }
-      @keyframes boot { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
-      @media (prefers-reduced-motion: reduce) { .boot-bar span { animation: none; width: 12%; } }
+      .boot-spin { width: 36px; height: 36px; border-radius: 50%; border: 4px solid #d8e0dd; border-top-color: #1e5c73; animation: boot-spin 0.9s linear infinite; }
+      @keyframes boot-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) { .boot-spin { animation-duration: 2.4s; } }
     </style>
   </head>
 
@@ -47,9 +46,29 @@
           </g>
         </svg>
         <p class="boot-title">PictoTalk</p>
-        <div class="boot-bar"><span></span></div>
-        <p class="boot-status">Loading…</p>
+        <div class="boot-spin"></div>
+        <p class="boot-status" id="boot-status">Loading…</p>
       </div>
     </div>
+    <script>
+      // Reload by itself if the app fails to start: a script that didn't load, or code that loaded
+      // but never replaced this screen within 5 s. A slow download is left alone (DOMContentLoaded
+      // only fires once the app's scripts have arrived). Shares its limit with src/components/Loading.tsx.
+      (function () {
+        var KEY = 'pictotalk:reloads', MAX = 3;
+        function reload() {
+          if (!document.querySelector('.boot')) return;
+          var n = 0;
+          try { n = Number(sessionStorage.getItem(KEY)) || 0; } catch (e) { n = MAX; }
+          var status = document.getElementById('boot-status');
+          if (n >= MAX) { if (status) status.textContent = 'Still loading. Check the internet connection.'; return; }
+          try { sessionStorage.setItem(KEY, String(n + 1)); } catch (e) {}
+          if (status) status.textContent = 'Refreshing…';
+          location.reload();
+        }
+        window.addEventListener('error', function (e) { if (e.target && e.target.tagName === 'SCRIPT') reload(); }, true);
+        document.addEventListener('DOMContentLoaded', function () { setTimeout(reload, 5000); });
+      })();
+    </script>
   </body>
 </html>

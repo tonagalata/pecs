@@ -8,6 +8,21 @@ import type { Level, Page, Profile, ScheduleItem, Settings, SymbolRef, Word } fr
  */
 type Def = [string, Group, string, number?, string?];
 
+/**
+ * Seed-data ARASAAC ids that broke: removed from ARASAAC (404) or pointing at the wrong picture.
+ * Saved boards are updated on load, for the built-in word each fix was made for only.
+ */
+export const REPLACED_ARASAAC: Record<string, { from: number; to: number }> = {
+  want: { from: 7650, to: 5441 },
+  need: { from: 5023, to: 37160 },
+  help: { from: 4997, to: 4570 },
+  more: { from: 3833, to: 5508 },
+  finished: { from: 3766, to: 28429 },
+  yes: { from: 5827, to: 5583 },
+  no: { from: 5464, to: 5525 }, // was "seasons"
+  stop: { from: 5466, to: 7195 }, // was "be"
+};
+
 const D: Record<string, Def> = {
   i: ['I', 'pron', 'i'], you: ['you', 'pron', 'you'], we: ['we', 'pron', 'we'], he: ['he', 'pron', 'he'],
   she: ['she', 'pron', 'she'], they: ['they', 'pron', 'we'], me: ['me', 'pron', 'i'], my: ['my', 'pron', 'i'],
@@ -15,19 +30,19 @@ const D: Record<string, Def> = {
   mom: ['Mom', 'pron', 'mom', 2458], dad: ['Dad', 'pron', 'dad', 31146], teacher: ['teacher', 'pron', 'teacher', 6556],
   friend: ['friend', 'pron', 'friend'], doctor_p: ['doctor', 'pron', 'doctor', 6561], sister: ['sister', 'pron', 'she', 2422],
   brother: ['brother', 'pron', 'he', 2423],
-  want: ['want', 'verb', 'want', 7650], need: ['need', 'verb', 'need', 5023], go: ['go', 'verb', 'go'],
+  want: ['want', 'verb', 'want', 5441], need: ['need', 'verb', 'need', 37160], go: ['go', 'verb', 'go'],
   eat: ['eat', 'verb', 'eat'], drink: ['drink', 'verb', 'drink', 6061], like: ['like', 'verb', 'like'],
   play: ['play', 'verb', 'play', 23392], look: ['look', 'verb', 'look'], feel: ['feel', 'verb', 'feel'],
   think: ['think', 'verb', 'think'], know: ['know', 'verb', 'know'], can: ['can', 'verb', 'go'],
   read: ['read', 'verb', 'read', 7141], draw: ['draw', 'verb', 'draw', 4951], swim: ['swim', 'verb', 'swim'],
-  walk: ['walk', 'verb', 'walk', 29951], sleep: ['sleep', 'verb', 'sleep', 6479], help: ['help', 'urgent', 'help', 4997],
-  stop: ['stop', 'urgent', 'stop', 5466], brk: ['break', 'urgent', 'break', undefined, 'a break'],
-  hurt: ['hurt', 'urgent', 'hurt'], more: ['more', 'desc', 'more', 3833], not: ['not', 'desc', 'not'],
-  dont: ["don't", 'desc', 'not'], finished: ['finished', 'desc', 'finished', 3766], different: ['different', 'desc', 'different'],
+  walk: ['walk', 'verb', 'walk', 29951], sleep: ['sleep', 'verb', 'sleep', 6479], help: ['help', 'urgent', 'help', 4570],
+  stop: ['stop', 'urgent', 'stop', 7195], brk: ['break', 'urgent', 'break', undefined, 'a break'],
+  hurt: ['hurt', 'urgent', 'hurt'], more: ['more', 'desc', 'more', 5508], not: ['not', 'desc', 'not'],
+  dont: ["don't", 'desc', 'not'], finished: ['finished', 'desc', 'finished', 28429], different: ['different', 'desc', 'different'],
   now: ['now', 'desc', 'now'], later: ['later', 'desc', 'later'], here: ['here', 'desc', 'here'], there: ['there', 'desc', 'there'],
   quiet: ['quiet', 'desc', 'quiet'], tired: ['tired', 'desc', 'tired', 35537], sick: ['sick', 'desc', 'sick', 7040],
   hot: ['hot', 'desc', 'hot'], cold: ['cold', 'desc', 'cold'], big: ['big', 'desc', 'big'], little: ['little', 'desc', 'little'],
-  yes: ['yes', 'social', 'yes', 5827], no: ['no', 'social', 'no', 5464], please: ['please', 'social', 'please'],
+  yes: ['yes', 'social', 'yes', 5583], no: ['no', 'social', 'no', 5525], please: ['please', 'social', 'please'],
   thanks: ['thank you', 'social', 'thankyou'],
   what: ['what', 'q', 'what'], where: ['where', 'q', 'where'], when: ['when', 'q', 'when'], who: ['who', 'q', 'who'],
   why: ['why', 'q', 'what'], how: ['how', 'q', 'what'], because: ['because', 'misc', 'because'],
@@ -78,7 +93,7 @@ const CORE_8x5 = [
 ];
 
 export const DEFAULT_SETTINGS: Settings = {
-  rate: 0.95, onTap: 'word', hdVoice: false, textPos: 'below', textSize: 'L', theme: 'light',
+  rate: 0.95, onTap: 'word', hdVoice: true, textPos: 'below', textSize: 'L', theme: 'light',
   reduceMotion: true, highlight: true, selectMode: 'tap', holdMs: 600, debounceMs: 500, extraGap: false,
   lock: 'sum', selfManage: false, symbolSet: 'arasaac', showTimes: true, keyboardLayout: 'qwerty', keepHistory: false,
 };
@@ -97,7 +112,6 @@ export function uid(prefix = 'id'): string {
 
 export function createProfile(name: string, level: Level): Profile {
   let pages: Page[];
-  let hide: string[] = [];
   let ids: string[];
   if (level === 'adult') {
     pages = [
@@ -114,11 +128,11 @@ export function createProfile(name: string, level: Level): Profile {
       fringe('places', 'Places', 6, 4, ['home', 'school', 'outside', 'shop', 'park', 'car', 'bus', 'bathroom'], 'home'),
       fringe('play', 'Play', 6, 4, ['music', 'tablet', 'tv', 'toy', 'read', 'draw', 'swim', 'walk', 'bath', 'sleep'], 'toy'),
     ];
-    if (level === 'young') hide = ['like', 'not', 'look', 'feel', 'where', 'what'];
   }
   ids = Array.from(new Set(pages.flatMap((p) => Object.values(p.cells))));
   const words: Record<string, Word> = {};
-  for (const id of ids) words[id] = { ...makeWord(id), ...(hide.includes(id) ? { hidden: true } : {}) };
+  // Every word starts visible. Supporters can still hide words in the editor to reveal them gradually.
+  for (const id of ids) words[id] = makeWord(id);
   const settings: Settings = {
     ...DEFAULT_SETTINGS,
     selfManage: level === 'adult',
