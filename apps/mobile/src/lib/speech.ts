@@ -60,15 +60,28 @@ function playUri(uri: string, token: number): Promise<void> {
 
 let voicesCache: Speech.Voice[] | null = null;
 
+/** Browsers fill in their voice list after page load; wait for it (briefly) before reading it. */
+function browserVoicesLoaded(timeoutMs = 2500): Promise<void> {
+  const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
+  if (!synth || synth.getVoices().length) return Promise.resolve();
+  return new Promise((resolve) => {
+    const finish = () => { synth.removeEventListener('voiceschanged', finish); clearTimeout(timer); resolve(); };
+    const timer = setTimeout(finish, timeoutMs);
+    synth.addEventListener('voiceschanged', finish);
+  });
+}
+
 export async function listVoices(): Promise<Speech.Voice[]> {
   if (voicesCache) return voicesCache;
   try {
-    const all = await Speech.getAvailableVoicesAsync();
-    voicesCache = all.filter((v) => v.language?.toLowerCase().startsWith('en'));
+    if (Platform.OS === 'web') await browserVoicesLoaded();
+    const all = (await Speech.getAvailableVoicesAsync()).filter((v) => v.language?.toLowerCase().startsWith('en'));
+    // An empty list on web usually means the browser hasn't loaded its voices yet: ask again next time.
+    if (all.length || Platform.OS !== 'web') voicesCache = all;
+    return all;
   } catch {
-    voicesCache = [];
+    return [];
   }
-  return voicesCache;
 }
 
 /** Prefer the voice the supporter chose, then any "Enhanced"/premium English voice. */
@@ -192,3 +205,13 @@ export async function loadInstalledPack(): Promise<boolean> {
 
 export const voicePackAvailable = () => Boolean(PACK_URL);
 export const voicePackLoaded = () => Boolean(manifest);
+
+/**
+ * Everything speech needs before the board opens: the device/browser voices and, if there is
+ * one, the HD voice pack manifest. Never takes longer than `timeoutMs`, so a slow or missing
+ * connection only means the board opens with the device voice.
+ */
+export async function prepareVoices(timeoutMs = 6000): Promise<void> {
+  const work = Promise.all([listVoices(), loadInstalledPack()]).catch(() => {});
+  await Promise.race([work, new Promise((r) => setTimeout(r, timeoutMs))]);
+}

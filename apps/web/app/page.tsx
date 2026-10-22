@@ -20,7 +20,7 @@ function MiniTile({ t, big }: { t: M & { hidden?: boolean }; big?: boolean }) {
   if (t.hidden) {
     return (
       <div className="tile" style={{ background: "transparent", borderStyle: "dashed", borderColor: "#9AA8A5", color: "#485A57" }}>
-        <img src={`/symbols/${t.img}.png`} alt="" style={{ opacity: 0.3, width: 40, height: 40 }} />
+        <img src={`/symbols/${t.img}.png`} alt="" style={{ opacity: 0.3 }} />
         <span>hidden</span>
       </div>
     );
@@ -66,9 +66,9 @@ export default function Home() {
             <div className="tablet" aria-hidden="true">
               <div className="tablet-screen">
                 <div className="mini-bar">
-                  {HERO_MSG.map((t) => <div key={t.w} style={{ width: 64 }}><MiniTile t={t} /></div>)}
+                  {HERO_MSG.map((t) => <div key={t.w} className="mini-msg"><MiniTile t={t} /></div>)}
                   <div style={{ flex: 1 }} />
-                  <span style={{ width: 52, height: 52, borderRadius: 12, background: "var(--accent)", display: "grid", placeItems: "center" }}>
+                  <span className="mini-speak">
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z" /><path d="M15.5 8.5a5 5 0 0 1 0 7" /><path d="M18.5 5.5a9 9 0 0 1 0 13" /></svg>
                   </span>
                 </div>
@@ -80,7 +80,7 @@ export default function Home() {
 
         <section id="try" className="band">
           <div className="wrap section">
-            <div className="section-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap", maxWidth: "none" }}>
+            <div className="section-head section-head-row">
               <div style={{ maxWidth: 640 }}>
                 <h2>Try it right here</h2>
                 <p>Tap a few pictures to build a message. Press <strong>Speak</strong> to hear it. Tap a picture in the message to take it out.</p>
@@ -183,7 +183,7 @@ export default function Home() {
             </div>
             <div>
               <div className="card" style={{ background: "var(--ground)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                <div className="board-head">
                   <strong style={{ fontFamily: "var(--display)", fontSize: 20, fontWeight: 600 }}>Sam&apos;s board</strong>
                   <span style={{ display: "flex", gap: 6 }}>
                     {["4 × 3", "6 × 4", "8 × 5"].map((s) => <span key={s} style={{ padding: "6px 12px", borderRadius: 999, fontSize: 14, fontWeight: 700, background: s === "6 × 4" ? "var(--accent)" : "#fff", color: s === "6 × 4" ? "#fff" : "var(--ink)", border: "1px solid var(--line-2)" }}>{s}</span>)}
@@ -202,7 +202,7 @@ export default function Home() {
         </section>
 
         <section id="faq" className="band-soft">
-          <div className="faq section" style={{ padding: "88px 24px" }}>
+          <div className="faq section">
             <h2 style={{ marginBottom: 32 }}>Questions people ask</h2>
             <details open><summary>Is PictoTalk really free?</summary><p>Yes. There&apos;s nothing to buy, no subscription and no account to make.</p></details>
             <details><summary>Is it only for children?</summary><p>No. The teen and adult profile has a grown-up look, more words, a keyboard and saved phrases.</p></details>
@@ -215,8 +215,8 @@ export default function Home() {
 
         <section className="cta">
           <div className="wrap">
-            <div style={{ flex: "1 1 480px", minWidth: 0 }}>
-              <h2 style={{ fontSize: 44 }}>Ready when you are</h2>
+            <div className="cta-text">
+              <h2 className="cta-title">Ready when you are</h2>
               <p>Open the board now, or take two minutes to set it up for someone.</p>
             </div>
             <div className="actions">

@@ -8,18 +8,26 @@ import { AtkinsonHyperlegible_400Regular, AtkinsonHyperlegible_700Bold } from '@
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider, useApp } from '@/lib/store';
 import { MessageProvider } from '@/lib/message';
+import { lockTabletLandscape } from '@/lib/orientation';
 import { setupWeb } from '@/lib/webSetup';
+import { Loading } from '@/components/Loading';
 
 setupWeb();
+lockTabletLandscape();
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function Shell() {
-  const { ready, palette, settings } = useApp();
+  const { ready, voicesReady, palette, settings } = useApp();
   const [fontsLoaded] = useFonts({ Lexend_500Medium, Lexend_600SemiBold, AtkinsonHyperlegible_400Regular, AtkinsonHyperlegible_700Bold });
-  const done = ready && fontsLoaded;
+  const done = ready && voicesReady && fontsLoaded;
   useEffect(() => { if (done) SplashScreen.hideAsync().catch(() => {}); }, [done]);
-  if (!done) return null;
+  if (!done) {
+    // Native shows the splash screen over this; on web it replaces the blank page.
+    const status = !ready ? 'Opening your board…' : !voicesReady ? 'Getting the voice ready…' : 'Almost ready…';
+    const progress = [ready, voicesReady, fontsLoaded].filter(Boolean).length / 3;
+    return <Loading status={status} progress={progress} />;
+  }
   return (
     <MessageProvider>
       <StatusBar style={settings.theme === 'dim' ? 'light' : 'dark'} />

@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { loadState, saveState } from './storage';
 import { resolveMissing } from './symbols';
-import { loadInstalledPack } from './speech';
+import { prepareVoices } from './speech';
 import { PALETTES, type Palette } from './theme';
 import type { AppState, Level, Profile, Settings, Word } from './types';
 import { createProfile, DEFAULT_SETTINGS } from './vocab';
@@ -10,6 +10,8 @@ const EMPTY: AppState = { version: 1, profiles: [], activeId: null, arasaacIds: 
 
 interface Ctx {
   ready: boolean;
+  /** Device voices and the HD voice pack manifest are loaded (or gave up after a timeout). */
+  voicesReady: boolean;
   state: AppState;
   profile: Profile | null;
   settings: Settings;
@@ -26,6 +28,7 @@ const AppCtx = createContext<Ctx | null>(null);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(EMPTY);
   const [ready, setReady] = useState(false);
+  const [voicesReady, setVoicesReady] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -33,7 +36,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const saved = await loadState<AppState>();
       if (saved && saved.version === 1) setState(saved);
       setReady(true);
-      loadInstalledPack().catch(() => {});
+      await prepareVoices();
+      setVoicesReady(true);
     })();
   }, []);
 
@@ -86,7 +90,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const settings = profile?.settings ?? DEFAULT_SETTINGS;
   const value: Ctx = {
-    ready, state, profile, settings, palette: PALETTES[settings.theme],
+    ready, voicesReady, state, profile, settings, palette: PALETTES[settings.theme],
     updateProfile, updateSettings, updateWord, addProfile, setActive,
   };
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;

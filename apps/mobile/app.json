@@ -10,9 +10,16 @@
     "ios": {
       "icon": "./assets/expo.icon",
       "supportsTablet": true,
+      "requireFullScreen": true,
       "bundleIdentifier": "org.pictotalk.app",
       "config": {
         "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "UISupportedInterfaceOrientations~ipad": [
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ]
       }
     },
     "android": {
@@ -57,6 +64,7 @@
           "microphonePermission": false
         }
       ],
+      "expo-screen-orientation",
       "expo-font"
     ],
     "experiments": {
