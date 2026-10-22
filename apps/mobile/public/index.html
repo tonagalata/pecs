@@ -5,6 +5,7 @@
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <title>PictoTalk</title>
+    <script>window.__pictotalkStart = Date.now();</script>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       html,
@@ -32,6 +33,8 @@
       .boot-spin { width: 36px; height: 36px; border-radius: 50%; border: 4px solid #d8e0dd; border-top-color: #1e5c73; animation: boot-spin 0.9s linear infinite; }
       @keyframes boot-spin { to { transform: rotate(360deg); } }
       @media (prefers-reduced-motion: reduce) { .boot-spin { animation-duration: 2.4s; } }
+      .boot-refresh { min-width: 160px; min-height: 52px; padding: 0 28px; border: 0; border-radius: 999px; background: #1e5c73; color: #fff;
+        font: 700 18px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; cursor: pointer; }
     </style>
   </head>
 
@@ -47,28 +50,26 @@
         </svg>
         <p class="boot-title">PictoTalk</p>
         <div class="boot-spin"></div>
-        <p class="boot-status" id="boot-status">Loading…</p>
+        <p class="boot-status" id="boot-status" aria-live="polite">Loading…</p>
       </div>
     </div>
     <script>
-      // Reload by itself if the app fails to start: a script that didn't load, or code that loaded
-      // but never replaced this screen within 5 s. A slow download is left alone (DOMContentLoaded
-      // only fires once the app's scripts have arrived). Shares its limit with src/components/Loading.tsx.
-      (function () {
-        var KEY = 'pictotalk:reloads', MAX = 3;
-        function reload() {
-          if (!document.querySelector('.boot')) return;
-          var n = 0;
-          try { n = Number(sessionStorage.getItem(KEY)) || 0; } catch (e) { n = MAX; }
-          var status = document.getElementById('boot-status');
-          if (n >= MAX) { if (status) status.textContent = 'Still loading. Check the internet connection.'; return; }
-          try { sessionStorage.setItem(KEY, String(n + 1)); } catch (e) {}
-          if (status) status.textContent = 'Refreshing…';
-          location.reload();
-        }
-        window.addEventListener('error', function (e) { if (e.target && e.target.tagName === 'SCRIPT') reload(); }, true);
-        document.addEventListener('DOMContentLoaded', function () { setTimeout(reload, 5000); });
-      })();
+      // If the app hasn't replaced this screen 5 s after the page opened (a stuck or failed
+      // download), ask the person to refresh. src/components/Loading.tsx does the same after the
+      // app's code has arrived, counting from the same start time.
+      setTimeout(function () {
+        var boot = document.querySelector('.boot');
+        if (!boot) return;
+        boot.removeAttribute('role');
+        boot.removeAttribute('aria-label');
+        document.querySelector('.boot-spin').remove();
+        document.getElementById('boot-status').textContent = 'This is taking longer than usual.';
+        var button = document.createElement('button');
+        button.className = 'boot-refresh';
+        button.textContent = 'Refresh';
+        button.onclick = function () { location.reload(); };
+        boot.appendChild(button);
+      }, Math.max(0, 5000 - (Date.now() - window.__pictotalkStart)));
     </script>
   </body>
 </html>

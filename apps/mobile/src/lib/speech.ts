@@ -61,7 +61,7 @@ function playUri(uri: string, token: number): Promise<void> {
 let voicesCache: Speech.Voice[] | null = null;
 
 /** Browsers fill in their voice list after page load; wait for it (briefly) before reading it. */
-function browserVoicesLoaded(timeoutMs = 2500): Promise<void> {
+function browserVoicesLoaded(timeoutMs = 1000): Promise<void> {
   const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
   if (!synth || synth.getVoices().length) return Promise.resolve();
   return new Promise((resolve) => {
@@ -74,8 +74,18 @@ function browserVoicesLoaded(timeoutMs = 2500): Promise<void> {
 export async function listVoices(): Promise<Speech.Voice[]> {
   if (voicesCache) return voicesCache;
   try {
-    if (Platform.OS === 'web') await browserVoicesLoaded();
-    const all = (await Speech.getAvailableVoicesAsync()).filter((v) => v.language?.toLowerCase().startsWith('en'));
+    let all: Speech.Voice[];
+    if (Platform.OS === 'web') {
+      // Read the browser's list directly: expo-speech waits for a `voiceschanged` event that
+      // Safari often never fires, which would hang forever.
+      await browserVoicesLoaded();
+      all = (window.speechSynthesis?.getVoices() ?? []).map((v) => ({
+        identifier: v.voiceURI, name: v.name, language: v.lang, quality: Speech.VoiceQuality.Default,
+      }));
+    } else {
+      all = await Speech.getAvailableVoicesAsync();
+    }
+    all = all.filter((v) => v.language?.toLowerCase().startsWith('en'));
     // An empty list on web usually means the browser hasn't loaded its voices yet: ask again next time.
     if (all.length || Platform.OS !== 'web') voicesCache = all;
     return all;
@@ -208,10 +218,10 @@ export const voicePackLoaded = () => Boolean(manifest);
 
 /**
  * Everything speech needs before the board opens: the device/browser voices and, if there is
- * one, the HD voice pack manifest. Never takes longer than `timeoutMs` (kept under the loading screen's
- * 5 s auto-refresh), so a slow or missing connection only means the board opens with the device voice.
+ * one, the HD voice pack manifest. Never takes longer than `timeoutMs` (well under the loading screen's
+ * 5 s "Refresh" prompt), so a slow or missing connection only means the board opens with the device voice.
  */
-export async function prepareVoices(timeoutMs = 4000): Promise<void> {
+export async function prepareVoices(timeoutMs = 2500): Promise<void> {
   const work = Promise.all([listVoices(), loadInstalledPack()]).catch(() => {});
   await Promise.race([work, new Promise((r) => setTimeout(r, timeoutMs))]);
 }

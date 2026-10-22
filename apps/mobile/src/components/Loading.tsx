@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { PALETTES } from '@/lib/theme';
 
 // Shown while the board, fonts and voices load. It uses no custom fonts or icon fonts (they may
@@ -7,19 +7,13 @@ import { PALETTES } from '@/lib/theme';
 // that static loader to this one without a flash.
 const P = PALETTES.light;
 
-/** Web: if loading stalls (a dropped request, a stuck font), reload the page by itself. */
-const STALL_MS = 5000;
-const MAX_RELOADS = 3;
-const RELOADS_KEY = 'pictotalk:reloads';
+/** Web: after this long since the page opened, ask the person to refresh. */
+const SLOW_MS = 5000;
 
-function reloadCount(): number {
-  try { return Number(sessionStorage.getItem(RELOADS_KEY)) || 0; } catch { return MAX_RELOADS; }
-}
-
-/** Call once the app has loaded, so a later stall gets its full set of automatic reloads again. */
-export function resetReloads() {
-  if (Platform.OS !== 'web') return;
-  try { sessionStorage.removeItem(RELOADS_KEY); } catch {}
+/** When the page started opening; set by public/index.html, so the 5 s spans both loaders. */
+function msSincePageOpened(): number {
+  const w = window as Window & { __pictotalkStart?: number };
+  return Date.now() - (w.__pictotalkStart ?? performance.timeOrigin);
 }
 
 function Mark() {
@@ -37,29 +31,33 @@ function Mark() {
 }
 
 export function Loading() {
-  const [reloading, setReloading] = useState(false);
-  const [gaveUp, setGaveUp] = useState(false);
+  const [slow, setSlow] = useState(false);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    const t = setTimeout(() => {
-      const n = reloadCount();
-      if (n >= MAX_RELOADS) { setGaveUp(true); return; }
-      try { sessionStorage.setItem(RELOADS_KEY, String(n + 1)); } catch {}
-      setReloading(true);
-      window.location.reload();
-    }, STALL_MS);
+    const t = setTimeout(() => setSlow(true), Math.max(0, SLOW_MS - msSincePageOpened()));
     return () => clearTimeout(t);
   }, []);
 
-  const status = gaveUp ? 'Still loading. Check the internet connection.' : reloading ? 'Refreshing…' : 'Loading…';
   return (
-    <View accessibilityRole="progressbar" accessibilityLabel={status}
+    <View accessibilityRole={slow ? undefined : 'progressbar'} accessibilityLabel={slow ? undefined : 'Loading'}
       style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 18, padding: 24, backgroundColor: P.ground }}>
       <Mark />
       <Text style={{ fontSize: 26, fontWeight: '600', color: P.ink }}>PictoTalk</Text>
-      <ActivityIndicator size="large" color={P.accent} />
-      <Text style={{ fontSize: 17, color: P.inkSoft, textAlign: 'center' }}>{status}</Text>
+      {slow ? (
+        <>
+          <Text accessibilityLiveRegion="polite" style={{ fontSize: 17, color: P.inkSoft, textAlign: 'center' }}>This is taking longer than usual.</Text>
+          <Pressable accessibilityRole="button" onPress={() => window.location.reload()}
+            style={{ minWidth: 160, minHeight: 52, paddingHorizontal: 28, borderRadius: 999, backgroundColor: P.accent, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: P.onAccent }}>Refresh</Text>
+          </Pressable>
+        </>
+      ) : (
+        <>
+          <ActivityIndicator size="large" color={P.accent} />
+          <Text style={{ fontSize: 17, color: P.inkSoft }}>Loading…</Text>
+        </>
+      )}
     </View>
   );
 }
