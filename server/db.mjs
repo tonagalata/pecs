@@ -1,5 +1,5 @@
 // Postgres for Tona Deploy. The platform injects DATABASE_URL when the app has a database
-// (`tona db add pictotalk`). Without it the server runs fine; nothing on the board needs it yet.
+// (`tona db add pictotalk`). Without it the server runs fine, and board sharing (/api/) is turned off.
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import pg from 'pg';
