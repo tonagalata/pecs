@@ -5,6 +5,8 @@
 //   the board is sized to fill the screen, and text size is set in Settings instead
 // - full-screen when added to the home screen, content inside the notch safe area
 // - works offline once loaded (service worker)
+import { listenForInstall } from './install';
+
 let done = false;
 
 function meta(name: string, content: string) {
@@ -16,6 +18,7 @@ function meta(name: string, content: string) {
 export function setupWeb() {
   if (done || typeof document === 'undefined') return;
   done = true;
+  listenForInstall();
   meta('viewport', 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
   meta('apple-mobile-web-app-capable', 'yes');
   meta('mobile-web-app-capable', 'yes');
@@ -37,8 +40,8 @@ export function setupWeb() {
   document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
   // Trackpad pinch on laptops arrives as ctrl + wheel.
   window.addEventListener('wheel', (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
-  // Offline support: app files and saved symbols are served by public/sw.js (production builds only).
-  if (!__DEV__ && 'serviceWorker' in navigator) {
+  // Offline support and installing: public/sw.js. In development it is registered but caches nothing.
+  if ('serviceWorker' in navigator) {
     const base = process.env.EXPO_BASE_URL ?? '';
     navigator.serviceWorker.register(`${base}/sw.js`, { scope: `${base}/` }).catch(() => {});
   }

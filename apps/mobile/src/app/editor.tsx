@@ -4,11 +4,12 @@ import { router } from 'expo-router';
 import { SupporterShell } from '@/components/SupporterShell';
 import { SymbolImage } from '@/components/Tile';
 import { Btn, Card, Icon, Row, Segmented, Toggle, Txt } from '@/components/ui';
+import { cellKey, closeGaps, parseKey, resizePage, sheetCount } from '@/lib/grid';
 import { useLayout } from '@/lib/layout';
 import { useProfile } from '@/lib/store';
 import { GROUP_COLORS, GROUP_ORDER } from '@/lib/theme';
 
-const SIZES = ['3x2', '4x3', '6x4', '8x5', '10x6'] as const;
+const SIZES = ['2x2', '3x2', '3x3', '4x3', '6x4', '8x5', '10x6'] as const;
 
 export default function Editor() {
   const { profile, palette, updateProfile, updateWord } = useProfile();
@@ -18,10 +19,28 @@ export default function Editor() {
   const [sel, setSel] = useState<string>('0:0');
   const [moving, setMoving] = useState<string | null>(null);
   const [box, setBox] = useState({ w: 0, h: 0 });
+  const [sheetState, setSheet] = useState(0);
+  const [extra, setExtra] = useState(0);
   if (!page) return null;
+  // Pages within this section: every page that has a word, plus any empty ones added here.
+  const used = sheetCount(page);
+  const sheets = used + extra;
+  const sheet = Math.min(sheetState, sheets - 1);
+  const goSheet = (n: number) => { setSheet(n); setSel(cellKey(n, 0, 0)); };
 
-  const setPage = (fn: (cells: Record<string, string>) => Record<string, string>, dims?: { cols: number; rows: number }) =>
-    updateProfile((p) => ({ ...p, pages: p.pages.map((pg) => (pg.id === page.id ? { ...pg, ...(dims ?? {}), cells: fn(pg.cells) } : pg)) }));
+  const setPage = (fn: (cells: Record<string, string>) => Record<string, string>) =>
+    updateProfile((p) => ({ ...p, pages: p.pages.map((pg) => (pg.id === page.id ? { ...pg, cells: fn(pg.cells) } : pg)) }));
+  const transformPage = (fn: (pg: typeof page) => typeof page) =>
+    updateProfile((p) => ({ ...p, pages: p.pages.map((pg) => (pg.id === page.id ? fn(pg) : pg)) }));
+  const resize = (cols: number, rows: number) => {
+    // Keep the selected word in view: find which page it lands on at the new size.
+    const id = page.cells[sel];
+    transformPage((pg) => resizePage(pg, cols, rows));
+    const next = resizePage(page, cols, rows);
+    const key = id ? Object.entries(next.cells).find(([, v]) => v === id)?.[0] : undefined;
+    const n = key ? parseKey(key)?.sheet ?? 0 : 0;
+    setExtra(0); setSheet(n); setSel(key ?? cellKey(n, 0, 0));
+  };
 
   const tap = (key: string) => {
     if (moving) {
@@ -54,7 +73,7 @@ export default function Editor() {
   for (let r = 0; r < nRows; r++) {
     const cells = [];
     for (let c = 0; c < nCols; c++) {
-      const key = transpose ? `${c}:${r}` : `${r}:${c}`;
+      const key = transpose ? cellKey(sheet, c, r) : cellKey(sheet, r, c);
       const id = page.cells[key];
       const word = id ? profile.words[id] : undefined;
       const g = GROUP_COLORS[word?.group ?? 'misc'];
@@ -83,12 +102,19 @@ export default function Editor() {
     <SupporterShell title={`${profile.name}'s board`} actions={
       <Segmented label="Grid size" value={`${page.cols}x${page.rows}` as (typeof SIZES)[number]}
         options={SIZES.map((sz) => ({ value: sz, label: sz.replace('x', ' × ') }))}
-        onChange={(v) => { const [cols, rows] = v.split('x').map(Number); setPage((cells) => cells, { cols, rows }); }} />
+        onChange={(v) => { const [cols, rows] = v.split('x').map(Number); resize(cols, rows); }} />
     }>
       <ScrollView horizontal style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8 }}>
-        {profile.pages.map((p) => <Btn key={p.id} label={p.name} selected={p.id === page.id} onPress={() => { setPageId(p.id); setSel('0:0'); setMoving(null); }} />)}
+        {profile.pages.map((p) => <Btn key={p.id} label={p.name} selected={p.id === page.id} onPress={() => { setPageId(p.id); setSel('0:0'); setMoving(null); setSheet(0); setExtra(0); }} />)}
       </ScrollView>
-      <Txt soft size={14}>Tap a space to edit it. Words never move unless you move them. Making the grid smaller only hides the outer spaces; nothing is lost.</Txt>
+      <Row gap={8} style={{ flexWrap: 'wrap' }}>
+        <Btn icon="chevron-left" accessibilityLabel="Previous page" disabled={sheet === 0} onPress={() => goSheet(sheet - 1)} />
+        <Txt bold size={16} style={{ minWidth: 92, textAlign: 'center' }}>Page {sheet + 1} of {sheets}</Txt>
+        <Btn icon="chevron-right" accessibilityLabel="Next page" disabled={sheet >= sheets - 1} onPress={() => goSheet(sheet + 1)} />
+        <Btn icon="plus" label="Add a page" onPress={() => { setExtra(extra + 1); goSheet(sheets); }} />
+        {used > 1 ? <Btn icon="minimize-2" label="Close up gaps" onPress={() => { transformPage(closeGaps); goSheet(0); }} /> : null}
+      </Row>
+      <Txt soft size={14}>Tap a space to edit it. Words never move unless you move them. When a section has more words than the grid holds, they continue on the next page and {profile.name} turns pages with big arrows. Changing the grid size keeps every word in the same order, and changing it back restores the layout.</Txt>
       <ScrollView style={{ flex: 1 }} scrollEnabled={L.compact} contentContainerStyle={{ flexGrow: 1, flexDirection: L.compact ? 'column' : 'row', gap: 16 }}>
         <View style={L.compact ? { height: Math.round(L.width * 1.25), gap } : { flex: 1, minWidth: 360, minHeight: 320, gap }} onLayout={(e: LayoutChangeEvent) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
           {box.w ? rows : null}

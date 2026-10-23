@@ -3,6 +3,7 @@ import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { router, usePathname, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '@/lib/store';
+import { SyncBadge } from './SyncBadge';
 import { Btn, Icon, Txt, type IconName } from './ui';
 
 const NAV: { href: Href; label: string; icon: IconName; match: string }[] = [
@@ -10,6 +11,7 @@ const NAV: { href: Href; label: string; icon: IconName; match: string }[] = [
   { href: '/editor', label: 'Boards', icon: 'grid', match: '/editor' },
   { href: '/word', label: 'Add a word', icon: 'plus-square', match: '/word' },
   { href: '/plan', label: 'Schedules', icon: 'calendar', match: '/plan' },
+  { href: '/share', label: 'Sharing', icon: 'users', match: '/share' },
   { href: '/settings', label: 'Settings', icon: 'sliders', match: '/settings' },
 ];
 
@@ -48,8 +50,15 @@ export function SupporterShell({ children, title, actions }: { children: React.R
       <View style={{ flex: 1, padding: side ? 20 : 12, gap: side ? 14 : 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <Txt display size={side ? 28 : 22} style={{ flex: 1, minWidth: 160 }} accessibilityRole="header">{title}</Txt>
+          {profile ? <SyncBadge /> : null}
           {actions}
         </View>
+        {profile?.sync?.role === 'view' && profile.sync.status !== 'removed' ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: palette.accentSoft, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 14 }}>
+            <Icon name="eye" size={20} />
+            <Txt size={15} style={{ flex: 1 }}>View only. This board is shared with you to look at; changes to words and pages aren’t saved.</Txt>
+          </View>
+        ) : null}
         {children}
       </View>
     </SafeAreaView>

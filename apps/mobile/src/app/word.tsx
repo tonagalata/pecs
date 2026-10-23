@@ -9,6 +9,7 @@ import { BUILTIN } from '@/lib/builtin';
 import { choosePhoto, deletePhoto } from '@/lib/photos';
 import { deleteRecording, keepRecording } from '@/lib/recordings';
 import { speak } from '@/lib/speech';
+import { firstFreeKey } from '@/lib/grid';
 import { useLayout } from '@/lib/layout';
 import { useProfile } from '@/lib/store';
 import { searchArasaac } from '@/lib/symbols';
@@ -18,10 +19,6 @@ import { uid } from '@/lib/vocab';
 
 type Hit = { key: string; label: string; symbol: SymbolRef };
 
-function firstFreeCell(cells: Record<string, string>, cols: number, rows: number): string | null {
-  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (!cells[`${r}:${c}`]) return `${r}:${c}`;
-  return null;
-}
 
 export default function WordScreen() {
   const params = useLocalSearchParams<{ id?: string; page?: string; cell?: string }>();
@@ -91,7 +88,8 @@ export default function WordScreen() {
       const id = uid('w');
       updateProfile((p) => {
         const pg = p.pages.find((x) => x.id === pageId) ?? p.pages[0];
-        const cell = params.cell && !pg.cells[params.cell] ? params.cell : firstFreeCell(pg.cells, pg.cols, pg.rows);
+        // A full section gets another page rather than turning the word away.
+        const cell = params.cell && params.page === pg.id && !pg.cells[params.cell] ? params.cell : firstFreeKey(pg);
         const pages = cell ? p.pages.map((x) => (x.id === pg.id ? { ...x, cells: { ...x.cells, [cell]: id } } : x)) : p.pages;
         return { ...p, pages, words: { ...p.words, [id]: { id, label: text, say: say.trim() || undefined, group, symbol, recording, lookup: text } } };
       });
