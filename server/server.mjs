@@ -3,7 +3,6 @@
 //   /          landing site      (apps/web, Next.js static export)
 //   /app/      web board         (apps/mobile, Expo web export with baseUrl /app)
 //   /voice/    HD voice pack     (scripts/voice-pack, generated during the Docker build)
-//   /api/      board sharing (api.mjs), when the app has a database
 //   /healthz   health check for the load balancer
 //
 // It listens on $PORT, and when DATABASE_URL is set it runs migrations before taking traffic.
@@ -12,7 +11,6 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { handleApi } from './api.mjs';
 import { connect, migrate } from './db.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
@@ -127,9 +125,8 @@ async function health(res) {
 }
 
 async function handle(req, res) {
-  const url = new URL(req.url ?? '/', 'http://localhost');
-  if (url.pathname === '/api' || url.pathname.startsWith('/api/')) return handleApi(pool, req, res, url.pathname);
   if (req.method !== 'GET' && req.method !== 'HEAD') return text(res, 405, 'Method not allowed', { Allow: 'GET, HEAD' });
+  const url = new URL(req.url ?? '/', 'http://localhost');
   // Never echo a leading "//" back into a Location header (protocol-relative open redirect).
   const pathname = '/' + url.pathname.replace(/^\/+/, '');
   let path;

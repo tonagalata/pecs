@@ -22,7 +22,6 @@ export default function SupporterHome() {
           <Btn key={p.id} label={p.name} selected={p.id === profile.id} onPress={() => setActive(p.id)} />
         ))}
         <Btn icon="user-plus" label="Add person" onPress={() => router.push('/setup')} />
-        <Btn icon="log-in" label="Join with a code" onPress={() => router.push('/join')} />
       </Row>
     }>
       <ScrollView contentContainerStyle={{ gap: 14, paddingBottom: 24 }}>
@@ -33,7 +32,6 @@ export default function SupporterHome() {
           <View style={{ flex: 1, minWidth: 220 }}>
             <Txt display size={23}>{profile.name}</Txt>
             <Txt soft size={16}>{LEVEL_INFO[profile.level].title} · {core?.cols} × {core?.rows} board · {shown} words showing{hidden.length ? `, ${hidden.length} hidden` : ''}</Txt>
-            {profile.sync ? <Txt soft size={14}>Shared · you {profile.sync.role === 'owner' ? 'shared it' : profile.sync.role === 'edit' ? 'can edit' : 'can view'}</Txt> : null}
           </View>
           <Btn kind="primary" label="Edit board" onPress={() => router.push('/editor')} />
           <Btn label={`See it as ${profile.name}`} onPress={() => router.replace('/board')} />

@@ -30,8 +30,7 @@ ENV CI=1 \
     EXPO_NO_TELEMETRY=1 \
     EXPO_BASE_URL=/app \
     EXPO_PUBLIC_VOICE_PACK_URL=/voice/${VOICE_PACK_VERSION}
-# pwa.mjs adds the web app manifest and the offline file list to the service worker.
-RUN npx expo export --platform web --output-dir dist && node scripts/pwa.mjs dist
+RUN npx expo export --platform web --output-dir dist
 
 # --- Landing site: Next.js static export ------------------------------------------------------
 FROM ${NODE} AS site

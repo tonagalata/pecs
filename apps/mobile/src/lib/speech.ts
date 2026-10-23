@@ -15,8 +15,6 @@ import { Directory, File, Paths } from 'expo-file-system';
 import type { Settings } from './types';
 
 const PACK_URL = process.env.EXPO_PUBLIC_VOICE_PACK_URL ?? '';
-/** Must match VOICE in public/sw.js. */
-const VOICE_CACHE = 'pictotalk-voice-v1';
 
 interface PackManifest {
   voice: string;
@@ -173,26 +171,6 @@ export async function installVoicePack(onProgress?: (done: number, total: number
     if (Platform.OS === 'web') {
       manifest = m;
       packBase = base;
-      // Save every clip in Cache Storage so HD voice keeps working offline (served by public/sw.js).
-      if (typeof caches !== 'undefined') {
-        const cache = await caches.open(VOICE_CACHE);
-        const files = Array.from(new Set(Object.values(m.clips))).map((f) => new URL(`${base}${f}`, location.href).href);
-        let done = 0;
-        for (let i = 0; i < files.length; i += 8) {
-          await Promise.all(files.slice(i, i + 8).map(async (url) => {
-            try {
-              if (!(await cache.match(url))) {
-                const res = await fetch(url);
-                if (res.ok) await cache.put(url, res);
-              }
-            } catch {
-              // Missing clips fall back to the device voice.
-            }
-            done += 1;
-          }));
-          onProgress?.(done, files.length);
-        }
-      }
       return true;
     }
     const dir = new Directory(Paths.document, 'voicepack', m.version);

@@ -61,10 +61,7 @@ export default function Setup() {
             </View>
           ))}
         </Row>
-        <Row gap={6}>
-          <Btn kind="plain" icon="log-in" label={L.compact ? 'Code' : 'I have an invite code'} accessibilityLabel="Join a shared board with an invite code" onPress={() => router.push('/join')} />
-          {state.profiles.length ? <Btn kind="plain" label="Cancel" onPress={() => router.back()} /> : null}
-        </Row>
+        {state.profiles.length ? <Btn kind="plain" label="Cancel" onPress={() => router.back()} /> : <View style={{ width: 60 }} />}
       </Row>
 
       <ScrollView contentContainerStyle={{ gap: 16, paddingBottom: 16 }} style={{ flex: 1 }}>

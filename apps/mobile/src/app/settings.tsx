@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Platform, ScrollView, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
-import { BackupCard } from '@/components/BackupCard';
 import { SupporterShell } from '@/components/SupporterShell';
 import { Btn, Card, Row, Segmented, Toggle, Txt } from '@/components/ui';
 import { installVoicePack, listVoices, speak, voicePackAvailable, voicePackLoaded } from '@/lib/speech';
@@ -135,12 +134,9 @@ export default function SettingsScreen() {
             ) : null}
             <Line label={`Let ${profile.name} change these settings`} hint="Good for teens and adults. The lock becomes a settings button."><Toggle label="Self-manage" value={st.selfManage} onChange={set('selfManage')} /></Line>
           </Card>
-          <BackupCard />
           <Card>
             <Txt display size={18}>Privacy</Txt>
-            <Txt size={15}>{profile.sync
-              ? 'This board is shared (see Sharing): its words, pages, photos, recordings, phrases and schedule are kept on the PictoTalk server for the people you invited. Settings and message history stay on this device. PictoTalk has no accounts and sends nothing about what is said. Symbol searches go to ARASAAC.'
-              : 'Boards, photos, recordings and settings are stored only on this device. PictoTalk has no accounts and sends nothing about what is said. Symbol searches go to ARASAAC.'}</Txt>
+            <Txt size={15}>Boards, photos, recordings and settings are stored only on this device. PictoTalk has no accounts and sends nothing about what is said. Symbol searches go to ARASAAC.</Txt>
             <Btn label="Set up another person" onPress={resetProfile} />
           </Card>
         </View>
