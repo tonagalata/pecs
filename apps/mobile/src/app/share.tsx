@@ -4,6 +4,7 @@ import { SupporterShell } from '@/components/SupporterShell';
 import { Btn, Card, Icon, Row, Segmented, Txt } from '@/components/ui';
 import { ago, confirm, copyText } from '@/lib/confirm';
 import { useProfile } from '@/lib/store';
+import { useSyncStatus } from '@/lib/syncStatus';
 import { createInvite, listMembers, removeMember, setMemberRole, startSharing, stopSharing, SyncError, type Member } from '@/lib/sync';
 import { FONTS } from '@/lib/theme';
 import type { ShareRole } from '@/lib/types';
@@ -13,6 +14,7 @@ const msgOf = (e: unknown) => (e instanceof SyncError || e instanceof Error ? e.
 
 export default function ShareScreen() {
   const { profile, palette, setSyncLink, syncNow, syncing } = useProfile();
+  const sync = useSyncStatus();
   const link = profile.sync;
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -77,13 +79,7 @@ export default function ShareScreen() {
     );
   }
 
-  const status = link.status === 'removed'
-    ? { icon: 'alert-circle' as const, color: palette.danger, text: 'This board is no longer shared with this device. Your copy stays here and still works.' }
-    : link.status === 'offline'
-      ? { icon: 'wifi-off' as const, color: palette.inkSoft, text: `Offline. Changes are saved here and will be shared when this device is back online. Last shared ${ago(link.lastSync)}.` }
-      : link.status === 'error'
-        ? { icon: 'alert-triangle' as const, color: palette.danger, text: `${link.error ?? 'Could not reach the server.'} Last shared ${ago(link.lastSync)}.` }
-        : { icon: 'check-circle' as const, color: palette.accent, text: `Up to date. Last shared ${ago(link.lastSync)}.` };
+  const status = { color: sync.kind === 'error' || sync.kind === 'removed' ? palette.danger : sync.kind === 'offline' ? palette.inkSoft : palette.accent };
 
   const makeInvite = () => run(async () => {
     const inv = await createInvite(link, role);
@@ -100,8 +96,11 @@ export default function ShareScreen() {
             <Txt display size={19}>{profile.name}’s board is shared</Txt>
             <Txt soft size={15}>You: {link.memberName} · {ROLE[link.role]}</Txt>
             <Row gap={10} style={{ alignItems: 'flex-start' }}>
-              {syncing ? <ActivityIndicator color={palette.accent} /> : <Icon name={status.icon} size={22} color={status.color} />}
-              <Txt size={16} style={{ flex: 1 }}>{status.text}</Txt>
+              {syncing ? <ActivityIndicator color={palette.accent} /> : <Icon name={sync.icon} size={22} color={status.color} />}
+              <View style={{ flex: 1, gap: 2 }}>
+                <Txt size={16}>{sync.long}</Txt>
+                {link.status !== 'removed' ? <Txt soft size={14}>Last shared {ago(link.lastSync)}.</Txt> : null}
+              </View>
             </Row>
             {link.role === 'view' && link.status !== 'removed' ? (
               <Txt soft size={15}>You can see this board and use it, but changes to words and pages aren’t saved. Ask {members?.find((m) => m.role === 'owner')?.name ?? 'the person who shared it'} for edit access.</Txt>

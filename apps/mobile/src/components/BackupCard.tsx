@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Platform, View } from 'react-native';
 import { router } from 'expo-router';
 import { backupName, buildBackup, parseBackup, restoreProfile, type BackupFile } from '@/lib/backup';
@@ -7,7 +7,7 @@ import { useProfile } from '@/lib/store';
 import { LEVEL_INFO } from '@/lib/vocab';
 import { Btn, Card, Row, Segmented, Txt } from './ui';
 
-/** Settings › Move to a new device: export and import backup files, and offline status on the web. */
+/** Settings › Move to a new device: export and import backup files. */
 export function BackupCard() {
   const { profile, state, palette, mutate, syncNow } = useProfile();
   const [scope, setScope] = useState<'this' | 'all'>('this');
@@ -15,21 +15,6 @@ export function BackupCard() {
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<BackupFile | null>(null);
   const [done, setDone] = useState<string[]>([]);
-  const [offline, setOffline] = useState('');
-
-  // Web: ask the service worker whether the whole app is saved on this device.
-  useEffect(() => {
-    if (Platform.OS !== 'web' || typeof navigator === 'undefined' || !navigator.serviceWorker) return;
-    const onMsg = (e: MessageEvent) => {
-      const d = e.data as { type?: string; cached?: number; total?: number };
-      if (d?.type !== 'pictotalk:status') return;
-      setOffline(d.total && (d.cached ?? 0) >= d.total ? 'Ready to use offline on this device.' : `Saving the app for offline use (${d.cached ?? 0} of ${d.total ?? '?'} files)…`);
-    };
-    navigator.serviceWorker.addEventListener('message', onMsg);
-    navigator.serviceWorker.ready.then((r) => r.active?.postMessage('pictotalk:status')).catch(() => {});
-    const t = setTimeout(() => setOffline((o) => o || 'Open PictoTalk once with an internet connection to save it for offline use.'), 3000);
-    return () => { navigator.serviceWorker.removeEventListener('message', onMsg); clearTimeout(t); };
-  }, []);
 
   const exportNow = async () => {
     setBusy(true); setMsg('Preparing the file…');
@@ -119,7 +104,6 @@ export function BackupCard() {
       {msg ? <Txt size={15}>{msg}</Txt> : null}
       <Txt soft size={14}>To keep the same board up to date on several devices, or with a therapist, use Sharing instead.</Txt>
       <Btn kind="plain" icon="users" label="Open Sharing" onPress={() => router.replace('/share')} />
-      {offline ? <Txt soft size={14}>{offline}</Txt> : null}
     </Card>
   );
 }

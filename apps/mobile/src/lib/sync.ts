@@ -5,7 +5,7 @@
 // takes what changed elsewhere, and merges the two (src/lib/doc.ts), so edits made at the same
 // time on different devices are all kept. Photos and recordings travel separately as media ids.
 import { Platform } from 'react-native';
-import { cleanDoc, equal, extractDoc, hashString, isDoc, merge3, type BoardDoc } from './doc';
+import { cleanDoc, countChanges, equal, extractDoc, hashString, isDoc, merge3, type BoardDoc } from './doc';
 import { readMedia, writeMedia } from './media';
 import type { Profile, ShareRole, SyncLink } from './types';
 
@@ -62,10 +62,9 @@ function eachMedia(doc: BoardDoc, fn: (uri: string) => string): BoardDoc {
   return { ...doc, words };
 }
 
-/** Replace this device's photo/recording uris with media ids, uploading any the server lacks. */
-async function toRemote(doc: BoardDoc, media: Record<string, string>, upload: Uploader | null): Promise<{ doc: BoardDoc; media: Record<string, string>; pending: [string, string][] }> {
+/** This device's board in the server's form: photo/recording uris become media ids. Uploads nothing. */
+function remoteForm(doc: BoardDoc, media: Record<string, string>): { doc: BoardDoc; pending: [string, string][] } {
   const byUri = new Map(Object.entries(media).map(([id, uri]) => [uri, id]));
-  const out = { ...media };
   const pending: [string, string][] = [];
   const remote = eachMedia(doc, (uri) => {
     if (!uri || uri.startsWith(REF)) return uri;
@@ -73,10 +72,24 @@ async function toRemote(doc: BoardDoc, media: Record<string, string>, upload: Up
     if (!id) { id = hashString(uri); pending.push([id, uri]); byUri.set(uri, id); }
     return REF + id;
   });
+  return { doc: remote, pending };
+}
+
+/** Replace this device's photo/recording uris with media ids, uploading any the server lacks. */
+async function toRemote(doc: BoardDoc, media: Record<string, string>, upload: Uploader | null): Promise<{ doc: BoardDoc; media: Record<string, string>; pending: [string, string][] }> {
+  const out = { ...media };
+  const { doc: remote, pending } = remoteForm(doc, media);
   if (upload) {
     for (const [id, uri] of pending) { await upload(id, uri); out[id] = uri; }
   }
   return { doc: remote, media: out, pending };
+}
+
+/** Changes made on this device that the shared copy doesn't have yet (0 for view-only access). */
+export function pendingChanges(p: Profile): number {
+  const link = p.sync;
+  if (!link || link.role === 'view' || link.status === 'removed' || !isDoc(link.base)) return 0;
+  return countChanges(cleanDoc(link.base), remoteForm(extractDoc(p), link.media).doc);
 }
 
 /** Replace media ids with files on this device, downloading the ones it doesn't have yet. */

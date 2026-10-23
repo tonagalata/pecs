@@ -11,12 +11,15 @@
 const BUILD = '__PICTOTALK_BUILD__';
 const PRECACHE = /* __PICTOTALK_PRECACHE__ */ [];
 const SHELL = `pictotalk-shell-${BUILD}`;
+// Not processed by scripts/pwa.mjs: the Expo dev server. Cache nothing, so code edits show up at once.
+const DEV = BUILD.startsWith('__');
 const SYMBOLS = 'pictotalk-symbols-v1'; // keep in sync with src/lib/symbolCache.web.ts
 const VOICE = 'pictotalk-voice-v1'; // keep in sync with src/lib/speech.ts
 const BASE = new URL('./', self.location).pathname; // "/app/" on the server, "/" without a base URL
 const INDEX = `${BASE}index.html`;
 
 self.addEventListener('install', (e) => {
+  if (DEV) { self.skipWaiting(); return; }
   e.waitUntil((async () => {
     const cache = await caches.open(SHELL);
     // Download in small batches; the index page must succeed, other files are retried on use.
@@ -74,7 +77,7 @@ async function page() {
 
 self.addEventListener('fetch', (e) => {
   const req = e.request;
-  if (req.method !== 'GET') return;
+  if (DEV || req.method !== 'GET') return;
   const url = new URL(req.url);
   if (/\/pictograms\/\d+\/\d+_\d+\.png$/.test(url.pathname)) return e.respondWith(cacheFirst(SYMBOLS, req, true));
   if (url.origin !== self.location.origin) return;

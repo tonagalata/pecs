@@ -1,6 +1,6 @@
 // Runs after `expo export --platform web`. Turns the export into an installable offline web app:
 //   - dist/manifest.webmanifest (name, icons, standalone display) under the right base URL
-//   - <link rel="manifest">, theme color and iPhone/iPad icon tags in dist/index.html
+//   - the manifest and iPhone/iPad icon links in dist/index.html pointed at the base URL
 //   - dist/sw.js with the full list of files to download at install and a build id
 // Usage: node scripts/pwa.mjs [distDir]   (EXPO_BASE_URL sets the base, e.g. /app)
 import { createHash } from 'node:crypto';
@@ -40,20 +40,13 @@ const manifest = {
 };
 await writeFile(join(dist, 'manifest.webmanifest'), JSON.stringify(manifest, null, 2));
 
+// public/index.html already has the manifest and icon tags, written for the site root.
 const indexPath = join(dist, 'index.html');
-let html = await readFile(indexPath, 'utf8');
-if (!html.includes('rel="manifest"')) {
-  const tags = [
-    `<link rel="manifest" href="${base}/manifest.webmanifest" />`,
-    `<meta name="theme-color" content="#1E5C73" />`,
-    `<link rel="apple-touch-icon" href="${base}/icons/apple-touch-icon.png" />`,
-    `<meta name="apple-mobile-web-app-capable" content="yes" />`,
-    `<meta name="mobile-web-app-capable" content="yes" />`,
-    `<meta name="apple-mobile-web-app-title" content="PictoTalk" />`,
-  ].join('\n    ');
-  html = html.replace('</head>', `    ${tags}\n  </head>`);
-  await writeFile(indexPath, html);
-}
+const html = await readFile(indexPath, 'utf8');
+if (!html.includes('rel="manifest"')) throw new Error('pwa: public/index.html is missing <link rel="manifest">');
+await writeFile(indexPath, html
+  .replace('href="/manifest.webmanifest"', `href="${base}/manifest.webmanifest"`)
+  .replace('href="/icons/apple-touch-icon.png"', `href="${base}/icons/apple-touch-icon.png"`));
 
 const skip = (rel) => rel === 'sw.js' || rel.endsWith('.map') || rel.endsWith('.br') || rel.endsWith('.gz') || rel.split('/').some((x) => x.startsWith('.'));
 const files = (await walk(dist)).map((f) => relative(dist, f).split(sep).join('/')).filter((r) => !skip(r)).sort();

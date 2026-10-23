@@ -3,6 +3,7 @@ import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { router, usePathname, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '@/lib/store';
+import { SyncBadge } from './SyncBadge';
 import { Btn, Icon, Txt, type IconName } from './ui';
 
 const NAV: { href: Href; label: string; icon: IconName; match: string }[] = [
@@ -49,6 +50,7 @@ export function SupporterShell({ children, title, actions }: { children: React.R
       <View style={{ flex: 1, padding: side ? 20 : 12, gap: side ? 14 : 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <Txt display size={side ? 28 : 22} style={{ flex: 1, minWidth: 160 }} accessibilityRole="header">{title}</Txt>
+          {profile ? <SyncBadge /> : null}
           {actions}
         </View>
         {profile?.sync?.role === 'view' && profile.sync.status !== 'removed' ? (

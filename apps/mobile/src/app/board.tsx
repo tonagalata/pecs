@@ -4,6 +4,7 @@ import { router, type Href } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { HoldButton } from '@/components/HoldButton';
 import { MessageBar } from '@/components/MessageBar';
+import { BoardSyncBadge } from '@/components/SyncBadge';
 import { EmptyCell, SymbolImage, Tile } from '@/components/Tile';
 import { Btn, Icon, Row, Screen, Txt, type IconName } from '@/components/ui';
 import { cellKey, sheetCount } from '@/lib/grid';
@@ -197,7 +198,10 @@ export default function Board() {
             </Pressable>
           ))}
         </ScrollView>
-        <Lock compact={compact} />
+        <View style={{ justifyContent: 'center', gap: 4 }}>
+          <BoardSyncBadge compact={compact} />
+          <Lock compact={compact} />
+        </View>
       </View>
     </Screen>
   );

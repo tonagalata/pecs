@@ -169,6 +169,25 @@ export function merge3(base: BoardDoc, mine: BoardDoc, theirs: BoardDoc): BoardD
   };
 }
 
+/**
+ * How many things changed between two versions of a board, counted the way a person would: each
+ * word, page or schedule step added, removed or edited is one change, and so is the phrase list,
+ * the name, the level or the schedule note.
+ */
+export function countChanges(base: BoardDoc, next: BoardDoc): number {
+  const byId = <T extends { id: string }>(l: T[]) => new Map(l.map((x) => [x.id, x]));
+  const keyed = <T>(a: Record<string, T> | Map<string, T>, b: Record<string, T> | Map<string, T>) => {
+    const A = a instanceof Map ? a : new Map(Object.entries(a)), B = b instanceof Map ? b : new Map(Object.entries(b));
+    let n = 0;
+    for (const k of new Set([...A.keys(), ...B.keys()])) if (!equal(A.get(k), B.get(k))) n++;
+    return n;
+  };
+  let n = keyed(base.words, next.words) + keyed(byId(base.pages), byId(next.pages)) + keyed(byId(base.schedule), byId(next.schedule));
+  if (!equal(base.pages.map((p) => p.id), next.pages.map((p) => p.id)) && n === 0) n++; // reordered only
+  for (const k of ['name', 'level', 'scheduleNote', 'phrases'] as const) if (!equal(base[k], next[k])) n++;
+  return n;
+}
+
 /** Small, fast, stable hash used to name photos and recordings (not for security). */
 export function hashString(str: string): string {
   let h1 = 0xdeadbeef, h2 = 0x41c6ce57, h3 = 0x2b5e0c1d, h4 = 0x9e3779b9;

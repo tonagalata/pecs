@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AppState as RNAppState, Platform } from 'react-native';
+import { onConnectionChange } from './connection';
 import { applyDoc, equal, extractDoc, keepShared, merge3, type BoardDoc } from './doc';
 import { normalizePage } from './grid';
 import { loadState, saveState } from './storage';
@@ -170,13 +171,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     syncAll();
     const timer = setInterval(() => { if (RNAppState.currentState === 'active') syncAll(); }, 30_000);
     const sub = RNAppState.addEventListener('change', (st) => { if (st === 'active') syncAll(); });
-    const online = () => syncAll();
-    if (Platform.OS === 'web' && typeof window !== 'undefined') window.addEventListener('online', online);
-    return () => {
-      clearInterval(timer);
-      sub.remove();
-      if (Platform.OS === 'web' && typeof window !== 'undefined') window.removeEventListener('online', online);
-    };
+    // Share changes made while offline the moment the connection comes back.
+    const off = onConnectionChange((online) => { if (online) syncAll(); });
+    return () => { clearInterval(timer); sub.remove(); off(); };
   }, [ready, syncAll]);
 
   /** A few seconds after the last edit to a shared board, send it. */

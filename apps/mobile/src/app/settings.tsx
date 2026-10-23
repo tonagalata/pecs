@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Platform, ScrollView, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { BackupCard } from '@/components/BackupCard';
+import { InstallCard } from '@/components/InstallCard';
 import { SupporterShell } from '@/components/SupporterShell';
 import { Btn, Card, Row, Segmented, Toggle, Txt } from '@/components/ui';
 import { installVoicePack, listVoices, speak, voicePackAvailable, voicePackLoaded } from '@/lib/speech';
@@ -135,6 +136,7 @@ export default function SettingsScreen() {
             ) : null}
             <Line label={`Let ${profile.name} change these settings`} hint="Good for teens and adults. The lock becomes a settings button."><Toggle label="Self-manage" value={st.selfManage} onChange={set('selfManage')} /></Line>
           </Card>
+          <InstallCard />
           <BackupCard />
           <Card>
             <Txt display size={18}>Privacy</Txt>
