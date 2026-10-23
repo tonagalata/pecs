@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>PictoTalk</title>
+    <script>window.__pictotalkStart = Date.now();</script>
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        overflow: hidden;
+        margin: 0;
+        background: #f2f5f4;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+    <!-- Shown until the app's JavaScript has downloaded; React replaces it with the same screen
+         (src/components/Loading.tsx) while the board and voices load. -->
+    <style>
+      .boot { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px;
+        background: #f2f5f4; color: #17302e; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+      .boot-title { font-size: 26px; font-weight: 600; margin: 0; }
+      .boot-status { font-size: 17px; color: #485a57; margin: 0; }
+      .boot-spin { width: 36px; height: 36px; border-radius: 50%; border: 4px solid #d8e0dd; border-top-color: #1e5c73; animation: boot-spin 0.9s linear infinite; }
+      @keyframes boot-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) { .boot-spin { animation-duration: 2.4s; } }
+      .boot-refresh { min-width: 160px; min-height: 52px; padding: 0 28px; border: 0; border-radius: 999px; background: #1e5c73; color: #fff;
+        font: 700 18px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; cursor: pointer; }
+    </style>
+  </head>
+
+  <body>
+    <noscript>You need to enable JavaScript to use PictoTalk.</noscript>
+    <div id="root">
+      <div class="boot" role="progressbar" aria-label="Loading PictoTalk">
+        <svg width="72" height="72" viewBox="0 0 40 40" aria-hidden="true">
+          <rect width="40" height="40" rx="12" fill="#1e5c73" />
+          <g transform="translate(8 8)" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><path d="M14 17.5h7" />
+          </g>
+        </svg>
+        <p class="boot-title">PictoTalk</p>
+        <div class="boot-spin"></div>
+        <p class="boot-status" id="boot-status" aria-live="polite">Loading…</p>
+      </div>
+    </div>
+    <script>
+      // If the app hasn't replaced this screen 5 s after the page opened (a stuck or failed
+      // download), ask the person to refresh. src/components/Loading.tsx does the same after the
+      // app's code has arrived, counting from the same start time.
+      setTimeout(function () {
+        var boot = document.querySelector('.boot');
+        if (!boot) return;
+        boot.removeAttribute('role');
+        boot.removeAttribute('aria-label');
+        document.querySelector('.boot-spin').remove();
+        document.getElementById('boot-status').textContent = 'This is taking longer than usual.';
+        var button = document.createElement('button');
+        button.className = 'boot-refresh';
+        button.textContent = 'Refresh';
+        button.onclick = function () { location.reload(); };
+        boot.appendChild(button);
+      }, Math.max(0, 5000 - (Date.now() - window.__pictotalkStart)));
+    </script>
+  </body>
+</html>

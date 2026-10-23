@@ -1,0 +1,24 @@
+{
+  "name": "pictotalk-web",
+  "version": "2.0.0",
+  "private": true,
+  "description": "PictoTalk landing site. Static export, hosted on S3 + CloudFront via SST.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "next": "16.2.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.1",
+    "typescript": "5.9.3"
+  }
+}

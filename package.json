@@ -1,28 +1,16 @@
 {
-  "name": "pecs-app",
-  "version": "0.1.0",
+  "name": "pictotalk",
   "private": true,
+  "version": "2.0.0",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "@aws-sdk/client-s3": "^3.1015.0",
-    "@libsql/client": "^0.17.2",
-    "next": "16.2.1",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "dev:web": "npm --prefix apps/web run dev",
+    "dev:app": "npm --prefix apps/mobile run start",
+    "install:all": "npm install && npm --prefix apps/web install && npm --prefix apps/mobile install",
+    "deploy": "sst deploy --stage production",
+    "deploy:dev": "sst deploy --stage dev",
+    "voice-pack": "node scripts/voice-pack/generate.mjs"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "20.19.37",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.1",
-    "tailwindcss": "^4",
-    "typescript": "5.9.3"
+    "sst": "^4.17.2"
   }
 }
