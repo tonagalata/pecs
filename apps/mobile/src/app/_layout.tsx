@@ -12,6 +12,7 @@ import { MessageProvider } from '@/lib/message';
 import { lockTabletLandscape } from '@/lib/orientation';
 import { setupWeb } from '@/lib/webSetup';
 import { Loading } from '@/components/Loading';
+import { TutorialToast } from '@/components/TutorialToast';
 
 setupWeb();
 lockTabletLandscape();
@@ -37,6 +38,7 @@ function Shell() {
     <MessageProvider>
       <StatusBar style={settings.theme === 'dim' ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false, animation: settings.reduceMotion ? 'none' : 'fade', contentStyle: { backgroundColor: palette.ground } }} />
+      <TutorialToast />
     </MessageProvider>
   );
 }

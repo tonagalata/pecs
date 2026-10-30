@@ -110,4 +110,6 @@ export interface AppState {
   activeId: string | null;
   /** keyword -> ARASAAC pictogram id, resolved once online and reused offline. */
   arasaacIds: Record<string, number>;
+  /** The tutorial invitation was dismissed or taken on this device, so it isn't offered again. */
+  tutorialSeen?: boolean;
 }

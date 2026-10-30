@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { BackupCard } from '@/components/BackupCard';
 import { InstallCard } from '@/components/InstallCard';
 import { SupporterShell } from '@/components/SupporterShell';
-import { Btn, Card, Row, Segmented, Toggle, Txt } from '@/components/ui';
+import { Btn, Card, Icon, Row, Segmented, Toggle, Txt } from '@/components/ui';
 import { installVoicePack, listVoices, speak, voicePackAvailable, voicePackLoaded } from '@/lib/speech';
 import { useProfile } from '@/lib/store';
 import { saveForOffline } from '@/lib/symbolCache';
@@ -55,6 +55,16 @@ export default function SettingsScreen() {
     <SupporterShell title="Settings" actions={<Txt soft size={15}>for {profile.name} · changes save straight away</Txt>}>
       <ScrollView contentContainerStyle={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, paddingBottom: 30, alignItems: 'flex-start' }}>
         <View style={{ flexGrow: 1, flexBasis: 320, minWidth: 0, gap: 14 }}>
+          <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flexWrap: 'wrap', backgroundColor: palette.accentSoft, borderColor: palette.accentSoft }}>
+            <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: palette.accent, alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="compass" size={24} color={palette.onAccent} />
+            </View>
+            <View style={{ flex: 1, minWidth: 180 }}>
+              <Txt display size={18}>Guided tour</Txt>
+              <Txt soft size={14}>How PictoTalk works, for parents, teachers and therapists. About 3 minutes.</Txt>
+            </View>
+            <Btn kind="primary" icon="play" label="Take the tour" onPress={() => router.push('/tutorial')} />
+          </Card>
           <Card>
             <Txt display size={18}>Voice and sound</Txt>
             <Line label="Voice" hint="Built into this device. Works offline and costs nothing.">
