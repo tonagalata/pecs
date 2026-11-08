@@ -88,6 +88,18 @@ export function LinkBtn({ href, ...props }: BtnProps & { href: Href }) {
   );
 }
 
+/**
+ * Body of a two-pane supporter screen. Phones: one column that scrolls as a whole.
+ * Tablets and laptops: two side-by-side panes held to the screen height, so each
+ * pane's own ScrollView can scroll. (A vertical ScrollView never limits its content's
+ * height, so lists inside it would just grow and couldn't scroll.)
+ */
+export function SplitBody({ compact, gap = 16, children }: { compact: boolean; gap?: number; children: React.ReactNode }) {
+  return compact
+    ? <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, gap }}>{children}</ScrollView>
+    : <View style={{ flex: 1, minHeight: 0, flexDirection: 'row', gap }}>{children}</View>;
+}
+
 export function Card({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   const { palette } = useApp();
   return <View style={[{ backgroundColor: palette.surface, borderColor: palette.line, borderWidth: 1, borderRadius: RADIUS.card, padding: 16, gap: 10 }, style]}>{children}</View>;

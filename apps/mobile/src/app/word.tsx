@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder } from 'expo-audio';
 import { SupporterShell } from '@/components/SupporterShell';
 import { SymbolImage } from '@/components/Tile';
-import { Btn, Card, Row, Segmented, Txt } from '@/components/ui';
+import { Btn, Card, Row, Segmented, SplitBody, Txt } from '@/components/ui';
 import { BUILTIN } from '@/lib/builtin';
 import { choosePhoto, deletePhoto } from '@/lib/photos';
 import { deleteRecording, keepRecording } from '@/lib/recordings';
@@ -107,14 +107,14 @@ export default function WordScreen() {
     <SupporterShell title={existing ? `Edit “${existing.label}”` : 'Add a word'} actions={
       <Row><Btn label="Cancel" onPress={() => router.back()} /><Btn kind="primary" label="Save word" disabled={!label.trim()} onPress={save} /></Row>
     }>
-      <ScrollView style={{ flex: 1 }} scrollEnabled={L.compact} contentContainerStyle={{ flexGrow: 1, flexDirection: L.compact ? 'column' : 'row', gap: L.compact ? 12 : 16 }}>
-        <Card style={L.compact ? { minHeight: 420 } : { flex: 1, minWidth: 340 }}>
+      <SplitBody compact={L.compact} gap={L.compact ? 12 : 16}>
+        <Card style={L.compact ? { minHeight: 420 } : { flex: 1, minWidth: 340, minHeight: 0 }}>
           <Segmented label="Picture source" value={tab} onChange={setTab} options={[{ value: 'symbols', label: 'Symbols' }, { value: 'photo', label: 'Photo' }]} />
           {tab === 'symbols' ? (
             <>
               <TextInput value={query} onChangeText={setQuery} placeholder="Search symbols, like juice or park" placeholderTextColor={palette.inkSoft} accessibilityLabel="Search symbols" style={input} />
               <Txt soft size={14}>{offline ? 'No connection. Showing the built-in symbols.' : liveHits.length ? `${liveHits.length} ARASAAC symbols` : 'Built-in symbols'}</Txt>
-              <ScrollView contentContainerStyle={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              <ScrollView style={L.compact ? undefined : { flex: 1 }} contentContainerStyle={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
                 {list.map((h) => {
                   const on = JSON.stringify(h.symbol) === JSON.stringify(symbol);
                   return (
@@ -200,7 +200,7 @@ export default function WordScreen() {
             }} />
           ) : null}
         </ScrollView>
-      </ScrollView>
+      </SplitBody>
     </SupporterShell>
   );
 }

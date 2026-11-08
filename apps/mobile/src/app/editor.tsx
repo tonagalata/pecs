@@ -3,7 +3,7 @@ import { Pressable, ScrollView, View, type LayoutChangeEvent } from 'react-nativ
 import { router } from 'expo-router';
 import { SupporterShell } from '@/components/SupporterShell';
 import { SymbolImage } from '@/components/Tile';
-import { Btn, Card, Icon, Row, Segmented, Toggle, Txt } from '@/components/ui';
+import { Btn, Card, Icon, Row, Segmented, SplitBody, Toggle, Txt } from '@/components/ui';
 import { cellKey, closeGaps, parseKey, resizePage, sheetCount } from '@/lib/grid';
 import { useLayout } from '@/lib/layout';
 import { useProfile } from '@/lib/store';
@@ -115,11 +115,11 @@ export default function Editor() {
         {used > 1 ? <Btn icon="minimize-2" label="Close up gaps" onPress={() => { transformPage(closeGaps); goSheet(0); }} /> : null}
       </Row>
       <Txt soft size={14}>Tap a space to edit it. Words never move unless you move them. When a section has more words than the grid holds, they continue on the next page and {profile.name} turns pages with big arrows. Changing the grid size keeps every word in the same order, and changing it back restores the layout.</Txt>
-      <ScrollView style={{ flex: 1 }} scrollEnabled={L.compact} contentContainerStyle={{ flexGrow: 1, flexDirection: L.compact ? 'column' : 'row', gap: 16 }}>
+      <SplitBody compact={L.compact}>
         <View style={L.compact ? { height: Math.round(L.width * 1.25), gap } : { flex: 1, minWidth: 360, minHeight: 320, gap }} onLayout={(e: LayoutChangeEvent) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
           {box.w ? rows : null}
         </View>
-        <Card style={L.compact ? {} : { width: 320, flexGrow: 0 }}>
+        <Card style={L.compact ? {} : { width: 320, flexGrow: 0, minHeight: 0 }}>
           {moving ? (
             <>
               <Txt display size={19}>Moving “{profile.words[page.cells[moving]]?.label}”</Txt>
@@ -127,7 +127,7 @@ export default function Editor() {
               <Btn label="Cancel move" onPress={() => setMoving(null)} />
             </>
           ) : w ? (
-            <ScrollView contentContainerStyle={{ gap: 12 }}>
+            <ScrollView style={L.compact ? undefined : { flex: 1 }} contentContainerStyle={{ gap: 12 }}>
               <Row gap={14}>
                 <View style={{ width: 96, height: 96, borderRadius: 18, borderWidth: 3, borderColor: GROUP_COLORS[w.group].edge, backgroundColor: GROUP_COLORS[w.group].fill, alignItems: 'center', justifyContent: 'center' }}>
                   <SymbolImage item={w} size={58} />
@@ -163,7 +163,7 @@ export default function Editor() {
             </View>
           )}
         </Card>
-      </ScrollView>
+      </SplitBody>
     </SupporterShell>
   );
 }
