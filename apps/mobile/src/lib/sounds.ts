@@ -30,7 +30,7 @@ export const SOUNDS: BuiltinSound[] = [
   { key: 'train', label: 'Train', category: 'Vehicles', file: require('../../assets/sounds/train.m4a') },
   { key: 'airplane', label: 'Airplane', category: 'Vehicles', file: require('../../assets/sounds/airplane.m4a') },
   { key: 'helicopter', label: 'Helicopter', category: 'Vehicles', file: require('../../assets/sounds/helicopter.m4a') },
-  { key: 'ambulance', label: 'Ambulance', category: 'Vehicles', file: require('../../assets/sounds/ambulance.m4a') },
+  { key: 'fire-truck', label: 'Fire truck', category: 'Vehicles', file: require('../../assets/sounds/fire-truck.m4a') },
   { key: 'police', label: 'Police car', category: 'Vehicles', file: require('../../assets/sounds/police.m4a') },
   { key: 'motorcycle', label: 'Motorcycle', category: 'Vehicles', file: require('../../assets/sounds/motorcycle.m4a') },
   { key: 'boat', label: 'Boat', category: 'Vehicles', file: require('../../assets/sounds/boat.m4a') },
