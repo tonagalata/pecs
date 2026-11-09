@@ -20,6 +20,8 @@ export interface Word {
   fallback?: string;
   /** On-device recording (file uri on native, data URL on web). */
   recording?: string;
+  /** Built-in sound effect played instead of the word (a key in lib/sounds.ts, e.g. "cow"). */
+  sound?: string;
   /** Hidden words keep their cell so motor plans are never disturbed. */
   hidden?: boolean;
 }

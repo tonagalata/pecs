@@ -1,7 +1,7 @@
 // Speech engine. Everything runs on the device; there is no per-phrase server call.
 //
 // Order of preference for any text:
-//   1. A family recording attached to that word        (recorded on this device)
+//   1. A family recording or built-in sound on that word (cow → moo; see sounds.ts)
 //   2. A clip from the HD voice pack, when switched on  (generated once with Kokoro, ~a few MB)
 //      - whole phrase clip if one exists, else word-by-word if every word has a clip
 //   3. The device's own text-to-speech voice             (iOS/Android system voices, Web Speech API)
@@ -42,7 +42,10 @@ async function ensureAudio() {
   }
 }
 
-function playUri(uri: string, token: number): Promise<void> {
+/** A file/data uri, or a bundled asset (`require(...)`) such as a built-in sound. */
+export type Clip = string | number;
+
+function playUri(uri: Clip, token: number): Promise<void> {
   return new Promise((resolve) => {
     if (token !== queueToken) return resolve();
     try {
@@ -129,10 +132,10 @@ export async function stopSpeaking() {
 }
 
 export interface SpeakOptions {
-  /** Recording to play instead of synthesizing (single word taps). */
-  recording?: string;
-  /** Per-word recordings, used when speaking a whole message. */
-  wordRecordings?: (string | undefined)[];
+  /** Recording or built-in sound to play instead of synthesizing (single word taps). */
+  recording?: Clip;
+  /** Per-word recordings or sounds, used when speaking a whole message. */
+  wordRecordings?: (Clip | undefined)[];
 }
 
 export async function speak(text: string, settings: Pick<Settings, 'voiceId' | 'rate' | 'hdVoice'>, opts: SpeakOptions = {}) {
@@ -156,7 +159,7 @@ export async function speak(text: string, settings: Pick<Settings, 'voiceId' | '
     if (parts.every(Boolean)) {
       for (const p of parts) {
         if (token !== queueToken) return;
-        await playUri(p as string, token);
+        await playUri(p as Clip, token);
       }
       return;
     }

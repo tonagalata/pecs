@@ -8,6 +8,7 @@ import { Btn, Card, Row, Segmented, SplitBody, Txt } from '@/components/ui';
 import { BUILTIN } from '@/lib/builtin';
 import { choosePhoto, deletePhoto } from '@/lib/photos';
 import { deleteRecording, keepRecording } from '@/lib/recordings';
+import { SOUND_CATEGORIES, SOUNDS, soundFile, soundLabel } from '@/lib/sounds';
 import { speak } from '@/lib/speech';
 import { firstFreeKey } from '@/lib/grid';
 import { useLayout } from '@/lib/layout';
@@ -33,6 +34,8 @@ export default function WordScreen() {
   const [fallback] = useState(existing?.fallback);
   const [pageId, setPageId] = useState(params.page ?? profile.pages[0]?.id);
   const [recording, setRecording] = useState<string | undefined>(existing?.recording);
+  const [sound, setSound] = useState<string | undefined>(existing?.sound);
+  const [showSounds, setShowSounds] = useState(false);
   const [tab, setTab] = useState<'symbols' | 'photo'>(existing?.symbol.kind === 'photo' ? 'photo' : 'symbols');
   const [query, setQuery] = useState(existing?.label ?? '');
   const [hits, setHits] = useState<Hit[]>([]);
@@ -74,7 +77,17 @@ export default function WordScreen() {
     await recorder.stop();
     setRecState('idle');
     await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
-    if (recorder.uri) setRecording(await keepRecording(recorder.uri));
+    if (recorder.uri) { setRecording(await keepRecording(recorder.uri)); setSound(undefined); }
+  };
+
+  // A built-in sound replaces the word (and any recording): tapping "cow" plays a moo.
+  const pickSound = (key: string) => {
+    const s = SOUNDS.find((x) => x.key === key);
+    if (!s) return;
+    setSound(key);
+    setRecording(undefined);
+    if (!label.trim()) { setLabel(s.label); setQuery(s.label); }
+    speak('', profile.settings, { recording: s.file });
   };
 
   const save = () => {
@@ -83,7 +96,7 @@ export default function WordScreen() {
     if (existing) {
       if (existing.symbol.kind === 'photo' && (symbol.kind !== 'photo' || symbol.uri !== existing.symbol.uri)) deletePhoto(existing.symbol.uri);
       if (existing.recording && existing.recording !== recording) deleteRecording(existing.recording);
-      updateProfile((p) => ({ ...p, words: { ...p.words, [existing.id]: { ...existing, label: text, say: say.trim() || undefined, group, symbol, recording, lookup: text } } }));
+      updateProfile((p) => ({ ...p, words: { ...p.words, [existing.id]: { ...existing, label: text, say: say.trim() || undefined, group, symbol, recording, sound, lookup: text } } }));
     } else {
       const id = uid('w');
       updateProfile((p) => {
@@ -91,7 +104,7 @@ export default function WordScreen() {
         // A full section gets another page rather than turning the word away.
         const cell = params.cell && params.page === pg.id && !pg.cells[params.cell] ? params.cell : firstFreeKey(pg);
         const pages = cell ? p.pages.map((x) => (x.id === pg.id ? { ...x, cells: { ...x.cells, [cell]: id } } : x)) : p.pages;
-        return { ...p, pages, words: { ...p.words, [id]: { id, label: text, say: say.trim() || undefined, group, symbol, recording, lookup: text } } };
+        return { ...p, pages, words: { ...p.words, [id]: { id, label: text, say: say.trim() || undefined, group, symbol, recording, sound, lookup: text } } };
       });
     }
     router.back();
@@ -150,7 +163,7 @@ export default function WordScreen() {
             </View>
             <View style={{ flex: 1, gap: 8 }}>
               <Txt soft size={15}>{`How it will look on ${profile.name}'s board.`}</Txt>
-              <Btn icon="volume-2" label="Hear it" disabled={!label.trim()} onPress={() => speak(say || label, profile.settings, { recording })} />
+              <Btn icon="volume-2" label="Hear it" disabled={!label.trim()} onPress={() => speak(say || label, profile.settings, { recording: recording ?? soundFile(sound) })} />
             </View>
           </Card>
           <Card>
@@ -177,7 +190,7 @@ export default function WordScreen() {
             </View>
           </Card>
           <Card>
-            <Txt bold size={15}>Voice</Txt>
+            <Txt bold size={15}>Voice or sound</Txt>
             <Row style={{ flexWrap: 'wrap' }}>
               {recState === 'recording'
                 ? <Btn kind="danger" icon="square" label="Stop" onPress={stopRec} />
@@ -185,7 +198,21 @@ export default function WordScreen() {
               {recording && recState === 'idle' ? <Btn icon="play" label="Play" onPress={() => speak(label, profile.settings, { recording })} /> : null}
               {recording && recState === 'idle' ? <Btn kind="plain" icon="trash-2" accessibilityLabel="Delete recording" onPress={() => setRecording(undefined)} /> : null}
             </Row>
-            <Txt soft size={14}>{recState === 'recording' ? 'Recording… say the word clearly, then tap Stop.' : recording ? 'This recording plays instead of the app voice.' : "Uses the device voice until you record one."}</Txt>
+            <Row style={{ flexWrap: 'wrap' }}>
+              <Btn icon="music" label={sound ? `Sound: ${soundLabel(sound)}` : 'Use a sound'} selected={showSounds} disabled={recState === 'recording'} onPress={() => setShowSounds((v) => !v)} />
+              {sound ? <Btn kind="plain" icon="x" accessibilityLabel="Remove sound" onPress={() => setSound(undefined)} /> : null}
+            </Row>
+            {showSounds ? SOUND_CATEGORIES.map((cat) => (
+              <View key={cat} style={{ gap: 6 }}>
+                <Txt soft bold size={13}>{cat}</Txt>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {SOUNDS.filter((s) => s.category === cat).map((s) => (
+                    <Btn key={s.key} label={s.label} selected={sound === s.key} accessibilityLabel={`${s.label} sound`} onPress={() => pickSound(s.key)} />
+                  ))}
+                </View>
+              </View>
+            )) : null}
+            <Txt soft size={14}>{recState === 'recording' ? 'Recording… say the word clearly, then tap Stop.' : recording ? 'This recording plays instead of the app voice.' : sound ? `The ${soundLabel(sound).toLowerCase()} sound plays instead of saying the word.` : 'Uses the device voice. Record your own voice, or pick a sound like a moo or a train.'}</Txt>
           </Card>
           {existing ? (
             <Btn kind="danger" label="Delete this word everywhere" onPress={() => {

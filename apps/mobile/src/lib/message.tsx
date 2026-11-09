@@ -1,5 +1,6 @@
 // The message being built. Kept in memory only (never saved unless the supporter turns on history).
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { wordAudio } from './sounds';
 import { speak } from './speech';
 import { useApp } from './store';
 
@@ -31,7 +32,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   const text = useMemo(() => items.map((i) => i.text).join(' ').replace(/\s+([.?!,])/g, '$1'), [items]);
 
   const speakOne = useCallback((t: string, wordId?: string) => {
-    const rec = wordId ? profile?.words[wordId]?.recording : undefined;
+    const rec = wordId ? wordAudio(profile?.words[wordId]) : undefined;
     speak(t, settings, { recording: rec });
   }, [profile, settings]);
 
@@ -40,7 +41,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     setItems(next);
     if (settings.onTap === 'word') speakOne(item.text, item.wordId);
     else if (settings.onTap === 'message') {
-      speak(next.map((i) => i.text).join(' '), settings, { wordRecordings: next.map((i) => (i.wordId ? profile?.words[i.wordId]?.recording : undefined)) });
+      speak(next.map((i) => i.text).join(' '), settings, { wordRecordings: next.map((i) => (i.wordId ? wordAudio(profile?.words[i.wordId]) : undefined)) });
     }
   }, [items, settings, speakOne, profile]);
 
@@ -52,7 +53,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 
   const speakAll = useCallback(() => {
     if (!items.length) return;
-    speak(text, settings, { wordRecordings: items.map((i) => (i.wordId ? profile?.words[i.wordId]?.recording : undefined)) });
+    speak(text, settings, { wordRecordings: items.map((i) => (i.wordId ? wordAudio(profile?.words[i.wordId]) : undefined)) });
     if (settings.keepHistory) updateProfile((p) => ({ ...p, history: [text, ...p.history].slice(0, 50) }));
   }, [items, text, settings, profile, updateProfile]);
 
